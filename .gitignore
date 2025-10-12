@@ -1,0 +1,19 @@
+# Ambientes virtuais e variáveis locais
+.venv/
+.env
+
+# Cache e temporários do Python
+__pycache__/
+*.pyc
+
+# Configurações locais de editor
+.vscode/
+.idea/
+
+# Arquivos de sistema (Windows/macOS)
+.DS_Store
+Thumbs.db
+
+# Bancos locais e backups
+*.sqlite3
+__db_backups__/
