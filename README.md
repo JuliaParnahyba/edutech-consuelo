@@ -16,3 +16,22 @@ _Projeto do curso Full Stack do Instituto Consuelo com a Casa Digital._
        - [**Monitor Douglas**](https://github.com/douglassilvaf)
 - **Proteções**: 
     - branch protection e CODEOWNERS **serão habilitados somente ao final**, antes da PR final.
+
+## Como rodar (mínimo)
+1. Gere dados sintéticos:
+    ```bash
+    python3 python/gerador_dados.py
+    python3 python/validador.py
+    ```
+
+2. Execute o schema e os dados no PostgreSQL:
+    ```
+    \i sql/schema.sql;
+    \i sql/dados.sql;
+    ```
+
+3. Rode as consultas:
+    ```
+    \i sql/consultas.sql;
+    ```
+
