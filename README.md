@@ -82,6 +82,26 @@ EDUTECH-CONSUELO/
 └── README.md
 ```
 
+<br>
+
+## 🐍 Ambiente Python
+
+Para configurar o ambiente Python localmente, execute:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+.venv\Scripts\activate     # Windows
+```
+
+Instale as dependências do projeto (caso existam):
+```bash
+pip install -r requirements.txt
+```
+
+💡 O ambiente virtual .venv já está incluído no .gitignore para evitar versionamento.
+Todas as dependências utilizadas no projeto devem ser registradas em requirements.txt.
+
 
 <br>
 
