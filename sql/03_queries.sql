@@ -1,4 +1,4 @@
--- EduTech | consultas.sql
+-- EduTech | queries.sql
 -- Objetivo: consultas de negócio e analíticas agrupadas em um único arquivo.
 
 -- Exemplo de seção:
