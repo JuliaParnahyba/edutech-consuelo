@@ -26,30 +26,6 @@ O sistema simula uma plataforma de **gerenciamento de cursos online**, aplicando
 
 <br>
 
-## ▶️ Como executar o projeto  
-
-### 1️⃣ Gerar dados sintéticos  
-Execute os scripts Python de geração e validação de dados:  
-```bash
-python3 python/gerador_dados.py
-python3 python/validador.py
-```
-
-### 2️⃣ Criar e popular o banco de dados (PostgreSQL)
-No terminal interativo do PostgreSQL, rode os scripts SQL:
-```bash
-\i sql/schema.sql;
-\i sql/dados.sql;
-```
-
-### 3️⃣ Executar consultas e relatórios
-```bash
-\i sql/consultas.sql;
-\i sql/relatorios_analiticos.sql;
-```
-
-<br>
-
 ## 📁 Estrutura de diretórios
 
 ```bash
@@ -84,9 +60,62 @@ EDUTECH-CONSUELO/
 
 <br>
 
+## 🛳️ Executar PostgreSQL via Docker
+
+<br>
+
+> <br>
+>
+> Porta do host: **5433** → Porta interna do container: **5432**  
+> Variáveis em `.env` (exemplo): 
+> ```bash
+> POSTGRES_VERSION=18
+> PGPORT=5433
+> POSTGRES_USER=edutech_admin
+> POSTGRES_PASSWORD=***
+> POSTGRES_DB=edutech
+> ```
+> <br>
+
+<br>
+
+Subir o banco:
+```bash
+docker compose up -d
+```
+
+<br>
+
+Verificar status:
+```bash
+docker ps --filter "name=edutech_db"
+```
+
+<br>
+
+Testar conexão:
+```bash
+PGPASSWORD=<sua_senha> psql -h 127.0.0.1 -p 5433 -U edutech_admin -d edutech -c "select current_database(), current_user;"
+```
+
+<br>
+
+Parar/Remover:
+```bash
+docker compose down         # para e mantém dados
+docker compose down -v      # ⚠️ remove também o volume (zera o banco)
+```
+
+<br>
+
+_Os scripts em ./sql são executados automaticamente apenas na primeira inicialização do volume pgdata._
+
+
+<br>
+
 ## 🐍 Ambiente Python
 
-Para configurar o ambiente Python localmente, execute:
+**Para configurar o ambiente Python localmente, execute:**
 
 ```bash
 python3 -m venv .venv
@@ -94,14 +123,41 @@ source .venv/bin/activate  # Linux/Mac
 .venv\Scripts\activate     # Windows
 ```
 
+<br>
+
 Instale as dependências do projeto (caso existam):
 ```bash
 pip install -r requirements.txt
 ```
 
-💡 O ambiente virtual .venv já está incluído no .gitignore para evitar versionamento.
-Todas as dependências utilizadas no projeto devem ser registradas em requirements.txt.
+<br>
 
+💡 _O ambiente virtual .venv já está incluído no .gitignore para evitar versionamento.
+Todas as dependências utilizadas no projeto serão registradas em requirements.txt._
+
+<br>
+
+## ▶️ Como executar o projeto  
+
+### 1️⃣ Gerar dados sintéticos  
+Execute os scripts Python de geração e validação de dados:  
+```bash
+python3 python/gerador_dados.py
+python3 python/validador.py
+```
+
+### 2️⃣ Criar e popular o banco de dados (PostgreSQL)
+No terminal interativo do PostgreSQL, rode os scripts SQL:
+```bash
+\i sql/schema.sql;
+\i sql/dados.sql;
+```
+
+### 3️⃣ Executar consultas e relatórios
+```bash
+\i sql/consultas.sql;
+\i sql/relatorios_analiticos.sql;
+```
 
 <br>
 
