@@ -1,6 +1,6 @@
 # Modelagem Lógica — EduTech
 
-> Versão: rascunho inicial  
+> Versão: rascunho inicial (v0) 
 > Objetivo: descrever entidades, atributos, chaves e relacionamentos até 3FN.
 
 <br>
