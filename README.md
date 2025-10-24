@@ -87,13 +87,14 @@ EDUTECH-CONSUELO/
 
 <br>
 
-## 🛳️ Executar PostgreSQL via Docker
+## 🛳️ Executar PostgreSQL + Adminer via Docker
 
 <br>
 
 > <br>
 >
-> Porta do host: **5433** → Porta interna do container: **5432**  
+> Porta do host: **5433** → Porta interna do container: **5432** <br>
+> Adminer: Interface web em [http://localhost:8080](http://localhost:8080)  
 > Variáveis em `.env` (exemplo): 
 > ```bash
 > POSTGRES_VERSION=18
@@ -101,26 +102,49 @@ EDUTECH-CONSUELO/
 > POSTGRES_USER=edutech_admin
 > POSTGRES_PASSWORD=sua_senha
 > POSTGRES_DB=edutech
+> ADMINER_PORT=8080
 > ```
 > <br>
 
 <br>
 
-Subir o banco:
+### 🚀 Subir o ambiente completo
 ```bash
 docker compose up -d
 ```
+Sobe dois serviços:
+  1. edutech_db — container PostgreSQL 18 com persistência no volume pgdata
+  2. edutech_adminer — interface gráfica web para gerenciamento do banco
+
+💡 _O Adminer só é liberado quando o banco estiver saudável (healthcheck OK)._
 
 <br>
 
-Verificar status:
+### 🔍 Acessar o banco via Adminer
+Abra o navegador [http://localhost:8080](http://localhost:8080) e preenchar os campos para realizar o login
+
+| Campo        | Valor recomendado                           |
+| ------------ | ------------------------------------------- |
+| **System**   | PostgreSQL                                  |
+| **Server**   | `db` (dentro da rede Docker) ou `localhost` |
+| **Username** | `edutech_admin`                             |
+| **Password** | `sua_senha`                               |
+| **Database** | `edutech`                                   |
+
+<br>
+
+![Login Adminer](/docs/src_img/image.png)
+
+<br>
+
+### 🔎 Verificar status:
 ```bash
 docker ps --filter "name=edutech_db"
 ```
 
 <br>
 
-Testar conexão:
+### ⚙️ Testar conexão:
 ```bash
 PGPASSWORD=sua_senha psql -h 127.0.0.1 -p 5433 -U edutech_admin -d edutech -c "SELECT current_database(), current_user;"
 
@@ -128,7 +152,7 @@ PGPASSWORD=sua_senha psql -h 127.0.0.1 -p 5433 -U edutech_admin -d edutech -c "S
 
 <br>
 
-Parar/Remover:
+### ⛓️‍💥 Parar/Remover:
 ```bash
 docker compose down         # para e mantém dados
 docker compose down -v      # ⚠️ remove também o volume (zera o banco)
