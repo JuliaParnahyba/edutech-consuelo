@@ -1,8 +1,12 @@
+# =========================
+# EduTech — docker-compose.yml
+# Docker Compose com PostgreSQL + Adminer
+# =========================
 name: edutech
 
 services: 
   db:
-    image: postgres:${POSTGRES_VERSION:-18}   # versão do PostgreSQL
+    image: postgres:${POSTGRES_VERSION:-18}   # versão do PostgreSQL, usando a 16 por padrão caso não seja passada nenhuma
     container_name: edutech_db
     ports:
       - "${PGPORT:-5433}:5432"                # expõe a porta 5433 do host → 5432 do container
@@ -18,6 +22,18 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:latest
+    container_name: edutech_adminer
+    depends_on:
+      db:
+        condition: service_healthy          # só libera Adminer quando o DB estiver OK
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"        # UI web do Adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: db            # conecta ao serviço
     restart: unless-stopped
 
 volumes:
