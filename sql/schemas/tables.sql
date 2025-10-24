@@ -68,9 +68,9 @@ CREATE TABLE IF NOT EXISTS cursos (
     curso_titulo                        VARCHAR(100) NOT NULL UNIQUE,
     curso_descricao                     VARCHAR(250),
     
-    curso_categoria_id                  INT NOT NULL REFERENCES categorias(categoria_id),
-    curso_instrutor_id                  INT NOT NULL REFERENCES instrutores(instrutor_id),
-    curso_nivel_id                      INT NOT NULL REFERENCES nivel_cursos(nivel_curso_id) ON DELETE RESTRICT,
+    curso_categoria_id                  INT NOT NULL REFERENCES categorias(categoria_id)        ON DELETE RESTRICT,
+    curso_instrutor_id                  INT NOT NULL REFERENCES instrutores(instrutor_id)       ON DELETE RESTRICT,
+    curso_nivel_id                      INT NOT NULL REFERENCES nivel_cursos(nivel_curso_id)    ON DELETE RESTRICT,
 
     curso_carga_horaria                 INT NOT NULL CHECK (curso_carga_horaria >= 1),
     curso_preco                         NUMERIC(10,2) NOT NULL CHECK (curso_preco >= 0),
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS cursos (
 
 CREATE TABLE IF NOT EXISTS modulos (
     modulo_id                           SERIAL PRIMARY KEY,
-    modulo_curso_id                     INT NOT NULL REFERENCES cursos(curso_id),
+    modulo_curso_id                     INT NOT NULL REFERENCES cursos(curso_id) ON DELETE CASCADE, -- módulos caem com o curso
     modulo_titulo                       VARCHAR(50) NOT NULL,
     modulo_ordem                        INT NOT NULL CHECK (modulo_ordem >= 1),
     modulo_descricao                    VARCHAR(250),
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS modulos (
 
 CREATE TABLE IF NOT EXISTS aulas (
     aula_id                             SERIAL PRIMARY KEY,
-    aula_modulo_id                      INT NOT NULL REFERENCES modulos(modulo_id),
+    aula_modulo_id                      INT NOT NULL REFERENCES modulos(modulo_id) ON DELETE CASCADE, -- aulas caem com o módulo
     aula_titulo                         VARCHAR(50) NOT NULL,
     aula_ordem                          INT NOT NULL CHECK (aula_ordem >= 1),
     aula_duracao_min                    INT NOT NULL CHECK (aula_duracao_min >= 1),
@@ -128,8 +128,8 @@ CREATE TABLE IF NOT EXISTS matriculas (
 
 -- entidades filhas
 CREATE TABLE IF NOT EXISTS instrutor_especialidades (
-    ie_instrutor_id                     INT NOT NULL REFERENCES instrutores(instrutor_id)           ON DELETE CASCADE,
-    ie_especialidade_id                 INT NOT NULL REFERENCES especialidades(especialidade_id)    ON DELETE RESTRICT,
+    ie_instrutor_id                     INT NOT NULL REFERENCES instrutores(instrutor_id)           ON DELETE CASCADE, -- instrutor_especialidades cai com instrutores
+    ie_especialidade_id                 INT NOT NULL REFERENCES especialidades(especialidade_id)    ON DELETE RESTRICT, -- não apagar especialidades com vínculos
 
     PRIMARY KEY (ie_instrutor_id, ie_especialidade_id),
 
@@ -139,8 +139,8 @@ CREATE TABLE IF NOT EXISTS instrutor_especialidades (
 
 CREATE TABLE IF NOT EXISTS progresso_aulas (
     progresso_id                        SERIAL PRIMARY KEY,
-    progresso_matricula_id              INT NOT NULL REFERENCES matriculas(matricula_id),
-    progresso_aula_id                   INT NOT NULL REFERENCES aulas(aula_id),
+    progresso_matricula_id              INT NOT NULL REFERENCES matriculas(matricula_id)    ON DELETE RESTRICT , -- não apagar matrícula com progresso
+    progresso_aula_id                   INT NOT NULL REFERENCES aulas(aula_id)              ON DELETE CASCADE, -- progresso cai com a aula
 
     progresso_percentual                INT NOT NULL DEFAULT 0 CHECK (progresso_percentual BETWEEN 0 AND 100),
     progresso_concluida                 BOOLEAN NOT NULL DEFAULT FALSE,
@@ -156,8 +156,8 @@ CREATE TABLE IF NOT EXISTS progresso_aulas (
 
 CREATE TABLE IF NOT EXISTS avaliacoes (
     avaliacao_id                        SERIAL PRIMARY KEY,
-    avaliacao_aluno_id                  INT NOT NULL REFERENCES alunos(aluno_id),
-    avaliacao_aula_id                   INT NOT NULL REFERENCES aulas(aula_id),
+    avaliacao_aluno_id                  INT NOT NULL REFERENCES alunos(aluno_id)    ON DELETE RESTRICT, -- não apagar aluno com avaliações
+    avaliacao_aula_id                   INT NOT NULL REFERENCES aulas(aula_id)      ON DELETE CASCADE, -- avaliações caem com a aula
 
     avaliacao_nota                      INT NOT NULL CHECK (avaliacao_nota BETWEEN 0 AND 5),
     avaliacao_comentario                VARCHAR(150),
