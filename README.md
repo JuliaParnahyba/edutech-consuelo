@@ -6,6 +6,19 @@ O sistema simula uma plataforma de **gerenciamento de cursos online**, aplicando
 
 <br>
 
+## 🎯 Objetivo do Projeto
+
+O **EduTech** foi projetado para consolidar o aprendizado de **banco de dados e automação de dados**, aplicando:
+
+- **Modelagem lógica e física em PostgreSQL**
+- **Execução de scripts SQL idempotentes**
+- **Triggers e documentação dentro do próprio banco**
+- **Políticas de integridade referencial (`ON DELETE` CASCADE/RESTRICT)**
+- **Geração de dados sintéticos com Python e Faker**
+- **Organização modular e versionada do schema**
+
+<br>
+
 ## ⚙️ Fluxo de branches e revisão  
 
 - **Branches principais:**  
@@ -29,39 +42,41 @@ O sistema simula uma plataforma de **gerenciamento de cursos online**, aplicando
 ## 📁 Estrutura de diretórios
 
 ```bash
-/docs/      → documentação e diagramas  
-/sql/       → schema.sql, dados.sql, consultas e relatórios  
-/python/    → scripts auxiliares (gerador, validador, utils)  
-/data/      → arquivos CSV gerados e processados  
-```
-
-```bash
 EDUTECH-CONSUELO/
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
 │   ├── PULL_REQUEST_TEMPLATE.md
-├── data/
+│
+├── data/                              # CSVs gerados pelos scripts Python
 │   └── ...
+│
 ├── docs/
+│   ├── modelagem/
+│   │   ├── modelagem01.md             # modelagem lógica v2 (atual)
+│   │   └── diagrama02_edutech.svg     # ERD atualizado
 │   ├── standards/
 │   ├── Resumo_EduTech.md
+│
 ├── python/
-│   ├── gerador_dados.py
-│   ├── utils.py
-│   ├── validador.py
+│   ├── gerador_dados.py               # gera dados sintéticos com Faker
+│   ├── validador.py                   # valida coerência entre tabelas
+│   ├── utils.py                       # funções auxiliares
+│
 ├── sql/
-│   ├── deploy.sql              # orquestrador (BEGIN…COMMIT + includes)
-│   ├── 00_env.sql              # schema, search_path, extensões (opcional)
+│   ├── deploy.sql                     # orquestrador geral (BEGIN…COMMIT)
+│   ├── env.sql                        # schema + search_path
 │   ├── queries/
-│     ├── queries.sql
+│   │   └── queries.sql
 │   ├── schemas/
-│     ├── comments.sql          # COMMENT ON TABLE/COLUMN…
-│     ├── indexes.sql           # CREATE INDEX … (idempotente)
-│     ├── tables.sql            # CREATE TABLE … (sem BEGIN/COMMIT aqui)
-│     ├── triggers.sql          # funções + triggers BEFORE UPDATE
+│   │   ├── tables.sql                 # DDL (13 tabelas + constraints)
+│   │   ├── indexes.sql                # índices idempotentes
+│   │   ├── triggers.sql               # funções + triggers updated_at
+│   │   ├── comments.sql               # COMMENT ON TABLE/COLUMN…
 │   └── seeds/
-│     ├── curse_level.sql
-│     ├── situation_insc.sql
+│       ├── curse_level.sql
+│       ├── situation_insc.sql
+│
+├── Makefile                           # automação: db.apply, db.reset, etc.
 ├── LICENSE
 └── README.md
 ```
@@ -80,7 +95,7 @@ EDUTECH-CONSUELO/
 > POSTGRES_VERSION=18
 > PGPORT=5433
 > POSTGRES_USER=edutech_admin
-> POSTGRES_PASSWORD=***
+> POSTGRES_PASSWORD=sua_senha
 > POSTGRES_DB=edutech
 > ```
 > <br>
@@ -103,7 +118,8 @@ docker ps --filter "name=edutech_db"
 
 Testar conexão:
 ```bash
-PGPASSWORD=<sua_senha> psql -h 127.0.0.1 -p 5433 -U edutech_admin -d edutech -c "select current_database(), current_user;"
+PGPASSWORD=sua_senha psql -h 127.0.0.1 -p 5433 -U edutech_admin -d edutech -c "SELECT current_database(), current_user;"
+
 ```
 
 <br>
@@ -121,9 +137,32 @@ _Os scripts em ./sql são executados automaticamente apenas na primeira iniciali
 
 <br>
 
+## 🧩 Automação via Makefile
+Comandos principais disponíveis:
+| Comando         | Descrição                                              |
+| --------------- | ------------------------------------------------------ |
+| `make db.apply` | Executa o `deploy.sql` (cria/atualiza schema completo) |
+| `make db.clean` | Remove apenas o schema `edutech`                       |
+| `make db.reset` | Dropa e recria o schema completo                       |
+| `make db.info`  | Exibe tabelas e funções do schema atual                |
+
+<br>
+
+
+## 🧠 Etapas já implementadas
+| Etapa                                    | Descrição                                                     | Status |
+| ---------------------------------------- | ------------------------------------------------------------- | ------ |
+| **[01] Setup inicial**                   | Estrutura de diretórios, Makefile, CLI GitHub                 | ✅      |
+| **[02.01] Modelagem Lógica**             | Entidades e relacionamentos normalizados                      | ✅      |
+| **[02.02] Implementação SQL**            | Tabelas, índices, triggers, comentários e políticas ON DELETE | ✅      |
+| **[02.03] Geração de Dados (Python)**    | Scripts de população e validação automatizada                 | 🔜     |
+| **[02.04] Consultas e Views Analíticas** | Criação de relatórios SQL e agregações                        | 🔜     |
+
+<br>
+
 ## 🐍 Ambiente Python
 
-**Para configurar o ambiente Python localmente, execute:**
+**Para criar ambiente virtual**
 
 ```bash
 python3 -m venv .venv
@@ -133,39 +172,98 @@ source .venv/bin/activate  # Linux/Mac
 
 <br>
 
-Instale as dependências do projeto (caso existam):
+**Instale as dependências do projeto:**
 ```bash
 pip install -r requirements.txt
 ```
-
-<br>
 
 💡 _O ambiente virtual .venv já está incluído no .gitignore para evitar versionamento.
 Todas as dependências utilizadas no projeto serão registradas em requirements.txt._
 
 <br>
 
-## ▶️ Como executar o projeto  
+## 🧭 Execução Geral do Projeto
+A automação do ambiente é feita via **Makefile**, garantindo portabilidade e reprodutibilidade.
+Todos os comandos abaixo funcionam em Linux, macOS e WSL2 (Windows).
 
-### 1️⃣ Gerar dados sintéticos  
-Execute os scripts Python de geração e validação de dados:  
+💡 _Dica rápida: execute make help para ver todos os comandos disponíveis com descrição._
+
+### 1️⃣ Subir o ambiente PostgreSQL via Docker
 ```bash
-python3 python/gerador_dados.py
-python3 python/validador.py
+make up
+```
+1. Cria e inicializa o container PostgreSQL definido no docker-compose.yml.
+2. Usa as variáveis de conexão padrão ou definidas no .env.
+
+- _Verificar se o container está ativo:_
+```bash
+docker ps --filter "name=edutech_db"
 ```
 
-### 2️⃣ Criar e popular o banco de dados (PostgreSQL)
-No terminal interativo do PostgreSQL, rode os scripts SQL:
+### 2️⃣ Criar e aplicar o schema completo
 ```bash
-\i sql/schema.sql;
-\i sql/dados.sql;
+make db.apply
+```
+_Executa o script sql/deploy.sql, que orquestra:_
+  1. Criação do schema edutech
+  2. Geração de todas as tabelas, índices e constraints
+  3. Criação dos triggers (updated_at)
+  4. Inserção de comentários e metadados
+
+- Para recriar o zero:
+```bash
+make db.reset
 ```
 
-### 3️⃣ Executar consultas e relatórios
-```bash
-\i sql/consultas.sql;
-\i sql/relatorios_analiticos.sql;
+- Para apenas remover o schema:
 ```
+make db.clean
+```
+
+
+### 3️⃣ Explorar e validar o banco
+1. Obtém resumo de estrutura e integridade:
+```bash
+make db.info
+```
+Mostra os seguintes dados:
+  1. Schemas disponíveis
+  2. Tabelas e índices do schema `edutech`
+  3. Triggers ativos
+  4. Regras `ON DELETE` de todas as FKs
+
+
+2. Abrir sessão interativa do PostgreSQL:
+```bash
+make db.shell
+```
+_Entra diretamente no prompt edutech=# autenticado com as credenciais configuradas.
+Ideal para testes manuais e consultas rápidas._
+
+
+### 4️⃣ Executar consultas analíticasExecutar consultas e relatórios
+```bash
+make db.query
+```
+_Executa automaticamente o script `sql/queries/queries.sql` usando as variáveis de conexão definidas no `.env` ou de conexão padrão contidas no Makefile._
+
+### 5️⃣ Encerrar ou reiniciar containers
+1. Parar o container sem apagar os dados:
+```bash
+make down
+```
+
+2. Parar e apagar o volume (reset total):
+```bash
+make down-v
+```
+
+### 6️⃣ Conferir ambiente atual
+```bash
+make env
+```
+_Exibe o host, porta, usuário e banco utilizados pelos comandos automáticos._
+
 
 <br>
 
@@ -177,5 +275,5 @@ No terminal interativo do PostgreSQL, rode os scripts SQL:
 
 <br>
 
-📌 **Última atualização:** 13 de outubro de 2025  
+📌 **Última atualização:** 24 de outubro de 2025  
 📎 **Responsável:** [@JuliaParnahyba](https://github.com/JuliaParnahyba)
