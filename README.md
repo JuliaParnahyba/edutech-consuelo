@@ -45,17 +45,17 @@ O **EduTech** foi projetado para consolidar o aprendizado de **banco de dados e 
 EDUTECH-CONSUELO/
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
-│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── PULL_REQUEST_TEMPLATE.md
 │
 ├── data/                              # CSVs gerados pelos scripts Python
 │   └── ...
 │
 ├── docs/
 │   ├── modelagem/
-│   │   ├── modelagem01.md             # modelagem lógica v2 (atual)
+│   │   ├── modelagem02.md             # modelagem lógica v2 (atual)
 │   │   └── diagrama02_edutech.svg     # ERD atualizado
 │   ├── standards/
-│   ├── Resumo_EduTech.md
+│   └── Resumo_EduTech.md
 │
 ├── python/
 │   ├── gerador_dados.py               # gera dados sintéticos com Faker
@@ -71,12 +71,16 @@ EDUTECH-CONSUELO/
 │   │   ├── tables.sql                 # DDL (13 tabelas + constraints)
 │   │   ├── indexes.sql                # índices idempotentes
 │   │   ├── triggers.sql               # funções + triggers updated_at
-│   │   ├── comments.sql               # COMMENT ON TABLE/COLUMN…
-│   └── seeds/
-│       ├── curse_level.sql
-│       ├── situation_insc.sql
+│   │   └── comments.sql               # COMMENT ON TABLE/COLUMN…
+│   ├── seeds/
+│   │   ├── course_level.sql
+│   │   └── enrollment_status.sql
+│   └── views/                         # (para relatórios analíticos futuros)
 │
 ├── Makefile                           # automação: db.apply, db.reset, etc.
+├── docker-compose.yml
+├── .env.example
+├── requirements.txt
 ├── LICENSE
 └── README.md
 ```
