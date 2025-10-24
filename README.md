@@ -50,10 +50,18 @@ EDUTECH-CONSUELO/
 │   ├── utils.py
 │   ├── validador.py
 ├── sql/
-│   ├── schema.sql
-│   ├── dados.sql
-│   ├── consultas.sql
-│   ├── relatorios_analiticos.sql
+│   ├── deploy.sql              # orquestrador (BEGIN…COMMIT + includes)
+│   ├── 00_env.sql              # schema, search_path, extensões (opcional)
+│   ├── queries/
+│     ├── queries.sql
+│   ├── schemas/
+│     ├── comments.sql          # COMMENT ON TABLE/COLUMN…
+│     ├── indexes.sql           # CREATE INDEX … (idempotente)
+│     ├── tables.sql            # CREATE TABLE … (sem BEGIN/COMMIT aqui)
+│     ├── triggers.sql          # funções + triggers BEFORE UPDATE
+│   └── seeds/
+│     ├── curse_level.sql
+│     ├── situation_insc.sql
 ├── LICENSE
 └── README.md
 ```
