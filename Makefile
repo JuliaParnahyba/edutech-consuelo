@@ -64,7 +64,7 @@ help: ## Mostra esta ajuda
 	@printf "$(GRAY)Conexão atual:$(RESET) host=$(POSTGRES_HOST) port=$(POSTGRES_PORT) db=$(POSTGRES_DB) user=$(POSTGRES_USER)\n"
 	@echo ""
 
-.PHONY: help up down env db.apply db.clean db.reset db.info db.query
+.PHONY: help up down down-v env db.apply db.seed db.seed-dev db.clean db.reset db.shell db.info db.query
 
 # =========================
 # Docker
@@ -79,17 +79,31 @@ down-v: ## Derruba containers e volume
 	$(call spin,Derrubando containers e volumes (Docker), $(DOCKER_DOWN_V))
 
 env: ## Exibe variáveis de ambiente efetivas usadas pelo Make
-	$(call banner,"Ambiente efetivo")
+	$(call banner,Ambiente efetivo)
 	@printf "  HOST : $(POSTGRES_HOST)\n  PORT : $(POSTGRES_PORT)\n  USER : $(POSTGRES_USER)\n  DB   : $(POSTGRES_DB)\n"
 
 # =========================
 # Banco de Dados (psql)
 # =========================
 db.apply: ## Aplica o deploy completo (env, tables, indexes, triggers, comments, seeds)
-	$(call spin,Aplicando schema (sql/deploy.sql), $(PG_CMD) -f sql/deploy.sql)
+	$(call spin,Aplicando schema (sql/deploy.sql), \
+	$(PG_CMD) -f sql/deploy.sql)
+
+db.seed: ## Roda apenas os seeds (inclui dados.sql); use DEV=on para truncar
+	$(call spin,Executando seeds (DEV toggle via -v DEV=on), \
+	$(PG_CMD) -f sql/seeds/nivel_cursos.sql && \
+	$(PG_CMD) -f sql/seeds/situacoes_matricula.sql && \
+	$(PG_CMD) -f sql/seeds/dados.sql)
+
+db.seed-dev: ## Seed com TRUNCATE + RESTART IDENTITY (DEV=on)
+	$(call spin,Executando seeds com TRUNCATE (DEV=on), \
+	$(PG_CMD) -v DEV=on -f sql/seeds/nivel_cursos.sql && \
+	$(PG_CMD) -v DEV=on -f sql/seeds/situacoes_matricula.sql && \
+	$(PG_CMD) -v DEV=on -f sql/seeds/dados.sql)
 
 db.clean: ## DROP SCHEMA edutech CASCADE (apenas o schema, mantém DB/roles)
-	$(call spin,Limpando schema edutech (DROP CASCADE), $(PG_CMD) -c "DROP SCHEMA IF EXISTS edutech CASCADE;")
+	$(call spin,Limpando schema edutech (DROP CASCADE), \
+	$(PG_CMD) -c "DROP SCHEMA IF EXISTS edutech CASCADE;")
 
 db.reset: ## DROP + recria tudo via deploy.sql
 	$(call spin,Drop schema edutech, $(PG_CMD) -c "DROP SCHEMA IF EXISTS edutech CASCADE;")
