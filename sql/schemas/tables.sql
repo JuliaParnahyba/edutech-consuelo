@@ -1,5 +1,7 @@
+-- ======================================
 -- EduTech | tables.sql
 -- Objetivo: DDL do banco (tabelas, PK/FK, constraints), tendo as tabelas criadas dentro do schema criado no deploy.sql.
+-- ======================================
 
 -- 2. Criação das tabelas na ordem correta (quem fornece PK antes de quem usa como FK).
 -- entidades independentes

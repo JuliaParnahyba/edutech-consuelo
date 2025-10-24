@@ -1,5 +1,7 @@
+-- ======================================
 -- EduTech | deploy.sql
 -- Objetivo: "escrever algo"
+-- ======================================
 
 \set ON_ERROR_STOP on
 -- BEGIN/COMMIT recurso para evitar criar banco incompleto em caso de erro.

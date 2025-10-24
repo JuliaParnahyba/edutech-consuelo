@@ -1,5 +1,7 @@
+-- ======================================
 -- EduTech | index.sql
 -- Objetivo: "escrever algo"
+-- ======================================
 
 -- 3. Criação dos índices
 -- índices FKs de cursos

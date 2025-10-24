@@ -1,5 +1,7 @@
+-- ======================================
 -- EduTech | queries.sql
 -- Objetivo: consultas de negócio e analíticas agrupadas em um único arquivo.
+-- ======================================
 
 -- Exemplo de seção:
 -- -- [NEGÓCIO] Lista de cursos por categoria com contagem de alunos

@@ -1,5 +1,7 @@
+-- ======================================
 -- EduTech | triggers.sql
 -- Objetivo: "escrever algo"
+-- ======================================
 
 -- 4. Triggers | Função simples, trigger por tabela.
 -- ALUNOS
