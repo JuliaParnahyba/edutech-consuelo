@@ -127,6 +127,26 @@ def parse_args() -> argparse.Namespace:
     help="Quantidade de alunos a gerar.",
   )
 
+  parser.add_argument(
+    "--progresso-min-pct",
+    type=int,
+    default=20,
+    help="Percentual mínimo de aulas (por curso) a gerar progresso por matrícula"
+  )
+
+  parser.add_argument(
+    "--progresso-max-pct",
+    type=int,
+    default=80,
+    help="Percentual máximo de aulas (por curso) a gerar progresso por matrícula"
+  )
+
+  parser.add_argument(
+    "--avaliacoes-prob", 
+    type=float, 
+    default=0.6,
+    help="Probabilidade de gerar avaliação para uma aula concluída"
+  )
 
   return parser.parse_args()
 
@@ -609,6 +629,174 @@ def build_matriculas(
   return rows
 
 
+def index_modulo_to_curso(modulos: list[dict]) -> dict[int, int]:
+  """
+  Retorna {modulo_id: curso_id} para lookup rápido.
+  """
+  return {int(m["modulo_id"]): int(m["modulo_curso_id"]) for m in modulos}
+
+
+def index_curso_to_aulas(modulos: list[dict], aulas: list[dict]) -> dict[int, list[int]]:
+  """
+  Retorna {curso_id: [aula_id,...]} agrupando todas as aulas cujo módulo pertence ao curso.
+  """
+  modulo_to_curso = index_modulo_to_curso(modulos)
+  curso_to_aulas: dict[int, list[int]] = {}
+  for a in aulas:
+    aula_id = int(a["aula_id"])
+    modulo_id = int(a["aula_modulo_id"])
+    curso_id = modulo_to_curso[modulo_id]
+    curso_to_aulas.setdefault(curso_id, []).append(aula_id)
+  return curso_to_aulas
+
+
+def map_aula_info(aulas: list[dict]) -> dict[int, dict]:
+  """
+  Retorna {aula_id: row} para acessar, por exemplo, aula_duracao_min.
+  """
+  return {int(a["aula_id"]): a for a in aulas}
+
+
+def build_progresso_aulas(
+  rng,
+  matriculas: list[dict],
+  modulos: list[dict],
+  aulas: list[dict],
+  min_pct: int,
+  max_pct: int,
+) -> list[dict]:
+  """
+  Gera progresso por matrícula em uma amostra de aulas do curso da matrícula.
+  Regras:
+    - UNIQUE (progresso_matricula_id, progresso_aula_id)
+    - progresso_percentual ∈ [0,100]
+    - progresso_concluida True <=> percentual == 100 (ou >= 95, com arredondamento)
+    - progresso_tempo_assistido_min >= 0 e coerente com aula_duracao_min
+    - progresso_data_conclusao só quando concluída
+  """
+  curso_to_aulas = index_curso_to_aulas(modulos, aulas)
+  aula_info = map_aula_info(aulas)
+
+  rows: list[dict] = []
+  seen_pairs: set[tuple[int, int]] = set()
+  now = datetime.now()
+
+  def pick_percentual():
+    # enviesado para valores altos, porém variáveis
+    # mistura de distribuição: 60% chance de 70–100, 40% 0–70
+    if rng.random() < 0.6:
+      return rng.randint(70, 100)
+    return rng.randint(0, 70)
+
+  for m in matriculas:
+    matr_id = int(m["matricula_id"])
+    curso_id = int(m["matricula_curso_id"])
+    dt_matr = datetime.strptime(m["matricula_data_matricula"], "%Y-%m-%d %H:%M:%S")
+
+    aulas_do_curso = curso_to_aulas.get(curso_id, [])
+    if not aulas_do_curso:
+      continue
+
+    # quantidade-alvo de aulas para esta matrícula
+    k_min = max(1, int(len(aulas_do_curso) * min_pct / 100))
+    k_max = max(k_min, int(len(aulas_do_curso) * max_pct / 100))
+    k = rng.randint(k_min, k_max)
+
+    # seleciona k aulas aleatórias do curso (sem repetição)
+    selecionadas = rng.sample(aulas_do_curso, k)
+
+    for aula_id in selecionadas:
+      if (matr_id, aula_id) in seen_pairs:
+        continue
+      seen_pairs.add((matr_id, aula_id))
+
+      perc = pick_percentual()
+      # defina concluída como 100% (ou >= 95 arredondado para 100)
+      concluida = perc >= 100 or perc >= 95 and rng.random() < 0.5
+      if concluida:
+        perc = 100
+
+      # tempo assistido coerente (limitado à duração da aula)
+      dur_total = int(aula_info[aula_id]["aula_duracao_min"])
+      tempo_assistido = int(round(dur_total * (perc / 100)))
+
+      # datas
+      dt_ref = dt_matr + timedelta(days=rng.randint(0, 365))
+      dt_conc = dt_ref + timedelta(days=rng.randint(0, 60)) if concluida else None
+
+      rows.append({
+        "progresso_id": len(rows) + 1,
+        "progresso_matricula_id": matr_id,
+        "progresso_aula_id": aula_id,
+        "progresso_percentual": perc,
+        "progresso_concluida": str(bool(concluida)).lower(),
+        "progresso_data_conclusao": to_iso(dt_conc) if dt_conc else "",
+        "progresso_tempo_assistido_min": tempo_assistido,
+        "progresso_data_criacao": to_iso(dt_ref),
+      })
+
+  return rows
+
+
+def build_avaliacoes(
+  rng,
+  progresso: list[dict],
+  matriculas: list[dict],
+  prob_avaliar: float,
+) -> list[dict]:
+  """
+  Gera avaliações para algumas aulas concluídas:
+    - Fonte: progresso com progresso_concluida == true
+    - UNIQUE (avaliacao_aluno_id, avaliacao_aula_id)
+    - avaliacao_nota ∈ [0,5]
+  """
+  # map matricula_id -> aluno_id
+  matr_to_aluno = {int(m["matricula_id"]): int(m["matricula_aluno_id"]) for m in matriculas}
+
+  rows: list[dict] = []
+  seen_pairs: set[tuple[int, int]] = set()
+
+  for p in progresso:
+    if p["progresso_concluida"] != "true":
+      continue
+    if rng.random() > prob_avaliar:
+      continue
+
+    matr_id = int(p["progresso_matricula_id"])
+    aula_id = int(p["progresso_aula_id"])
+    aluno_id = matr_to_aluno.get(matr_id)
+    if aluno_id is None:
+      continue
+
+    if (aluno_id, aula_id) in seen_pairs:
+      continue
+    seen_pairs.add((aluno_id, aula_id))
+
+    # nota enviesada para 3–5
+    nota = rng.choices([0,1,2,3,4,5], weights=[1,2,4,8,12,10], k=1)[0]
+    comentario = ""
+    if rng.random() < 0.45:  # ~45% deixam comentário
+      comentario = Faker("pt_BR").sentence(nb_words=rng.randint(6, 14))[:150]
+
+    # data de avaliação próxima da conclusão (se houver), senão “agora - aleatório”
+    if p.get("progresso_data_conclusao"):
+      dt = datetime.strptime(p["progresso_data_conclusao"], "%Y-%m-%d %H:%M:%S") \
+        + timedelta(days=rng.randint(0, 30))
+    else:
+      dt = datetime.now() - timedelta(days=rng.randint(0, 365))
+
+    rows.append({
+      "avaliacao_id": len(rows) + 1,
+      "avaliacao_aluno_id": aluno_id,
+      "avaliacao_aula_id": aula_id,
+      "avaliacao_nota": nota,
+      "avaliacao_comentario": comentario,
+      "avaliacao_data_avaliacao": to_iso(dt),
+    })
+
+  return rows
+
+
 def main() -> None:
   """
   Ponto de entrada do gerador (versão mínima).
@@ -722,6 +910,34 @@ def main() -> None:
   )
   write_csv(paths.data_dir / "matriculas.csv", matriculas, matriculas[0].keys())
   log.info(f"matriculas.csv: {len(matriculas)} (pares aluno-curso únicos)")
+
+  # 15. Progresso de aulas
+  progresso = build_progresso_aulas(
+    rng=rng,
+    matriculas=matriculas,
+    modulos=modulos,
+    aulas=aulas,
+    min_pct=args.progresso_min_pct,
+    max_pct=args.progresso_max_pct,
+  )
+  write_csv(paths.data_dir / "progresso_aulas.csv", progresso,
+    progresso[0].keys() if progresso else
+    ["progresso_id","progresso_matricula_id","progresso_aula_id","progresso_percentual",
+      "progresso_concluida","progresso_data_conclusao","progresso_tempo_assistido_min","progresso_data_criacao"])
+  log.info(f"progresso_aulas.csv: {len(progresso)}")
+
+# 16. Avaliações
+  avaliacoes = build_avaliacoes(
+    rng=rng,
+    progresso=progresso,
+    matriculas=matriculas,
+    prob_avaliar=args.avaliacoes_prob,
+  )
+  write_csv(paths.data_dir / "avaliacoes.csv", avaliacoes,
+    avaliacoes[0].keys() if avaliacoes else
+    ["avaliacao_id","avaliacao_aluno_id","avaliacao_aula_id","avaliacao_nota","avaliacao_comentario","avaliacao_data_avaliacao"])
+  log.info(f"avaliacoes.csv: {len(avaliacoes)}")
+
 
 
 
