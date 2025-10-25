@@ -1,1 +1,2 @@
-# EduTech project dependencies
+Faker==25.0.0
+
