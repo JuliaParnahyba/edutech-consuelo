@@ -74,6 +74,13 @@ def parse_args() -> argparse.Namespace:
     help="Quantidade de instrutores a gerar.",
   )
 
+  parser.add_argument(
+    "--cursos",
+    type=int,
+    default=30,
+    help="Quantidade de cursos a gerar."
+  )
+
 
   return parser.parse_args()
 
@@ -277,6 +284,64 @@ def build_instrutores(faker, count: int, rng, especialidade_ids: list[int]) -> t
 
   return rows_instrutores, rows_ie
 
+
+def build_cursos(
+  faker,
+  count: int,
+  rng,
+  categoria_ids: list[int],
+  instrutor_ids: list[int],
+  nivel_ids: list[int],
+) -> list[dict]:
+  """
+  Gera cursos compatíveis com o DDL:
+  curso_id, curso_titulo, curso_descricao,
+  curso_categoria_id (FK), curso_instrutor_id (FK), curso_nivel_id (FK),
+  curso_carga_horaria, curso_preco, curso_data_criacao
+  """
+
+  rows: list[dict] = []
+  used_titles: set[str] = set()
+  now = datetime.now()
+
+  for idx in range(1, count + 1):
+    # título único (limite 100 chars)
+    # faker.unique ajuda, mas garantimos via set também
+    for _ in range(10):  # poucas tentativas
+      t = faker.unique.catch_phrase()
+      t = t[:100]
+      if t not in used_titles:
+          used_titles.add(t)
+          titulo = t
+          break
+    else:
+        titulo = f"Curso {idx}"
+
+    descricao = faker.paragraph(nb_sentences=3)
+    categoria_id = rng.choice(categoria_ids)
+    instrutor_id = rng.choice(instrutor_ids)
+    nivel_id = rng.choice(nivel_ids)
+
+    carga_horaria = rng.randint(8, 120)
+    preco = round(rng.uniform(49.9, 499.9), 2)
+    created_at = now - timedelta(days=rng.randint(0, 730))
+
+    rows.append({
+      "curso_id": idx,
+      "curso_titulo": titulo,
+      "curso_descricao": descricao[:250],
+      "curso_categoria_id": categoria_id,
+      "curso_instrutor_id": instrutor_id,
+      "curso_nivel_id": nivel_id,
+      "curso_carga_horaria": carga_horaria,
+      "curso_preco": f"{preco:.2f}",
+      "curso_data_criacao": to_iso(created_at),
+      # opcional: "curso_data_atualizacao": to_iso(created_at),
+    })
+
+  return rows
+
+
 def main() -> None:
   """
   Ponto de entrada do gerador (versão mínima).
@@ -337,6 +402,19 @@ def main() -> None:
   write_csv(paths.data_dir / "instrutor_especialidades.csv", instrutor_especialidades, 
     instrutor_especialidades[0].keys() if instrutor_especialidades else ["ie_instrutor_id","ie_especialidade_id","ie_data_criacao"])
   log.info(f"instrutor_especialidades.csv: {len(instrutor_especialidades)} links")
+
+  # 10. Gerar cursos
+  cursos = build_cursos(
+    faker=faker,
+    count=args.cursos,
+    rng=rng,
+    categoria_ids=[c["categoria_id"] for c in categorias],
+    instrutor_ids=[i["instrutor_id"] for i in instrutores],
+    nivel_ids=[n["nivel_curso_id"] for n in nivel_cursos],
+  )
+  write_csv(paths.data_dir / "cursos.csv", cursos, cursos[0].keys())
+  log.info(f"cursos.csv: {len(cursos)}")
+
 
 
 if __name__ == "__main__":
