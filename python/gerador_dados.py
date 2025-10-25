@@ -13,9 +13,9 @@
 from __future__ import annotations
 import argparse
 import random
-from typing import Any
+from typing import Any, Set
 from faker import Faker
-from datetime import datetime
+from datetime import datetime, timedelta
 from utils import resolve_paths, setup_logger, write_csv, to_iso
 
 # -----------------------------
@@ -57,6 +57,14 @@ def parse_args() -> argparse.Namespace:
     help="Quantidade de categorias a gerar.",
   )
 
+  parser.add_argument(
+    "--instrutores",
+    type=int,
+    default=12,
+    help="Quantidade de instrutores a gerar.",
+  )
+
+
   return parser.parse_args()
 
 
@@ -89,35 +97,48 @@ def build_categorias(faker, count: int):
   
   return rows
 
-def gerar_alunos(quantidade):
-  '''
-  Gera dados de alunos com nomes, emails e datas realistas
-  '''
 
-def gerar_instrutores(quantidade):
-  '''
-  Gera dados de instrutores com especialidades
-  '''
+def unique_email(faker, existing: Set[str]) -> str:
+  """
+  Gera um email único usando o Faker, garantindo que não repita
+  """
+  while True:
+    e = faker.unique.email()
+    if e not in existing:
+      existing.add(e)
+      return e
 
-def gerar_cursos(quantidade):
-  '''
-  Gera cursos com títulos, descrições, preços variados
-  '''
+def build_instrutores(faker, count: int, rng) -> list[dict]:
+  """
+  Gera registros de instrutores com e-mails únicos e datas realistas.
 
-def gerar_aulas(curso_id, quantidade):
-  '''
-  Gera estrutura de módulos e aulas
-  '''
+  Args:
+      faker (Faker): instância pt_BR
+      count (int): quantidade de instrutores
+      rng (random.Random): gerador pseudo-aleatório com seed fixa
 
-def gerar_matriculas(quantidade):
-  '''
-  Gera matrículas distribuídas entre alunos e cursos
-  '''
+  Returns:
+      list[dict]: registros para instrutores.csv
+  """
 
-def exportar_para_csv():
-  '''
-  Exporta todos os dados gerados para arquivos CSV separados
-  '''
+  rows: list[dict] = []
+  seen_emails: Set[str] = set()
+
+  for idx in range(1, count + 1):
+    nome = faker.name()
+    email = unique_email(faker, seen_emails)
+    bio = faker.sentence(nb_words=12)
+    created_at = datetime.now() - timedelta(days=rng.randint(0, 800))
+  
+    rows.append({
+      "id": idx,
+      "nome": nome,
+      "email": email,
+      "bio": bio,
+      "created_at": to_iso(created_at),
+    })
+
+  return rows
 
 def main() -> None:
   """
@@ -150,6 +171,11 @@ def main() -> None:
   categorias = build_categorias(faker, args.categorias)
   write_csv(paths.data_dir / "categorias.csv", categorias, categorias[0].keys())
   log.info(f"categorias.csv: {len(categorias)} registros gerados")
+  
+  # 6) Gerar instrutores
+  instrutores = build_instrutores(faker, args.instrutores, rng)
+  write_csv(paths.data_dir / "instrutores.csv", instrutores, instrutores[0].keys())
+  log.info(f"instrutores.csv: {len(instrutores)} registros gerados")
 
 
 if __name__ == "__main__":
