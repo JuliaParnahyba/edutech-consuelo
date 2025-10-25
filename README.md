@@ -244,7 +244,7 @@ _Entra diretamente no prompt edutech=# autenticado com as credenciais configurad
 
 <br>
 
-### Executar consultas analíticasExecutar consultas e relatórios
+### Executar consultas analíticas e relatórios
 ```bash
 make db.query
 ```

@@ -1,6 +1,6 @@
 # =========================
 # EduTech — docker-compose.yml
-# Docker Compose com PostgreSQL + Adminer
+# PostgreSQL + Adminer + App (Python)
 # =========================
 name: edutech
 
@@ -16,12 +16,14 @@ services:
       POSTGRES_DB: "${POSTGRES_DB:-edutech}"
     volumes:
       - pgdata:/var/lib/postgresql/data       # dados persistentes do PostgreSQL (volume nomeado)
-      - ./sql:/docker-entrypoint-initdb.d:ro  # scripts SQL inicializam somente na PRIMEIRA subida do volume
+      - ./sql:/sql:ro                         # scripts SQL inicializam somente na PRIMEIRA subida do volume
+      - ./:/import:ro                         # monta o repo no DB para o copy acessar
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-edutech_admin} -d ${POSTGRES_DB:-edutech} -h 127.0.0.1 -p 5432"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 60
+      start_period: 30s
     restart: unless-stopped
 
   adminer:
@@ -35,6 +37,17 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: db            # conecta ao serviço
     restart: unless-stopped
+
+  app:
+    image: python:3.12-slim
+    container_name: edutech_app
+    working_dir: /python
+    volumes:
+      - ./:/python
+    depends_on:
+      db:
+        condition: service_healthy
+    command: tail -f /dev/null
 
 volumes:
   pgdata:

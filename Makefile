@@ -11,10 +11,14 @@ POSTGRES_PASSWORD ?= edutechpass
 POSTGRES_DB ?= edutech
 
 # -------- Comandos base
-DOCKER_UP		= docker compose up -d
-DOCKER_DOWN		= docker compose down
-DOCKER_DOWN_V	= docker compose down -v
+COMPOSE			?= docker compose
+DOCKER_UP		= $(COMPOSE) up -d
+DOCKER_DOWN		= $(COMPOSE) down
+DOCKER_DOWN_V	= $(COMPOSE) down -v
 PG_CMD			= PGPASSWORD='$(POSTGRES_PASSWORD)' psql -h $(POSTGRES_HOST) -p $(POSTGRES_PORT) -U $(POSTGRES_USER) -d $(POSTGRES_DB) -v ON_ERROR_STOP=1
+
+# -------- Python dentro do container app
+PYRUN = $(COMPOSE) run --rm $(APP_SVC) python
 
 # -------- Cores/estilo (ANSI)
 RESET=\033[0m
@@ -94,6 +98,9 @@ down: ## Derruba containers (mantém volume); use 'make down-v' para reset total
 down-v: ## Derruba containers e volume
 	$(call spin,Derrubando containers e volumes (Docker), $(DOCKER_DOWN_V))
 
+logs: ## Logs do compose
+	$(COMPOSE) logs -f
+
 env: ## Exibe variáveis de ambiente efetivas usadas pelo Make
 	$(call banner,Ambiente efetivo)
 	@printf "  HOST : $(POSTGRES_HOST)\n  PORT : $(POSTGRES_PORT)\n  USER : $(POSTGRES_USER)\n  DB   : $(POSTGRES_DB)\n"
@@ -122,7 +129,7 @@ db.clean: ## DROP SCHEMA edutech CASCADE (apenas o schema, mantém DB/roles)
 	$(PG_CMD) -c "DROP SCHEMA IF EXISTS edutech CASCADE;")
 
 db.reset: ## DROP + recria tudo via deploy.sql
-	$(call spin,Drop schema edutech, $(PG_CMD) -c "DROP SCHEMA IF EXISTS edutech CASCADE;")
+	$(call spin,Droppando schema edutech, $(PG_CMD) -c "DROP SCHEMA IF EXISTS edutech CASCADE;")
 	$(call spin,Recriando schema (deploy.sql), $(PG_CMD) -f sql/deploy.sql)
 
 db.shell: ## Abre sessão interativa psql conectada ao banco edutech
@@ -168,37 +175,37 @@ db.query: ## Executa consultas analíticas em sql/queries/queries.sql
 	$(call ok,Consultas finalizadas com sucesso!)
 
 # =========================
-# Descobrir Python do sistema (python3 ou python)
+# Python / Dados sintéticos
 # =========================
+
+# Descobrir Python do sistema (python3 ou python)
 SYS_PY := $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null)
 
 ifeq ($(strip $(SYS_PY)),)
   $(error Python não encontrado no PATH. Instale Python 3 e garanta que 'python3' (ou 'python') esteja disponível)
 endif
 
-# =========================
-# Python / Dados sintéticos
-# =========================
-VENV          ?= .venv
-PY            := $(VENV)/bin/python
-REQ           ?= requirements.txt
-GEN_SCRIPT    ?= python/gerador_dados.py
+# Preparando os dados para ambiente py
+VENV          	?= .venv
+PY            	:= $(VENV)/bin/python
+REQ           	?= requirements.txt
+GEN_SCRIPT		?= python/gerador_dados.py
 
 # Parâmetros padrão do gerador (customize à vontade na CLI)
-CATEGORIAS    ?= 8
-ESPECIALIDADES?= 12
-INSTRUTORES   ?= 15
-CURSOS        ?= 25
-MOD_MIN       ?= 3
-MOD_MAX       ?= 6
-AUL_MIN       ?= 3
-AUL_MAX       ?= 6
-ALUNOS        ?= 300
-MATRICULAS    ?= 700
-PROG_MIN_PCT  ?= 25
-PROG_MAX_PCT  ?= 70
-AVAL_PROB     ?= 0.6
-SEED          ?= 42
+CATEGORIAS    	?= 8
+ESPECIALIDADES	?= 12
+INSTRUTORES   	?= 15
+CURSOS        	?= 25
+MOD_MIN       	?= 3
+MOD_MAX       	?= 6
+AUL_MIN       	?= 3
+AUL_MAX       	?= 6
+ALUNOS        	?= 300
+MATRICULAS    	?= 700
+PROG_MIN_PCT  	?= 25
+PROG_MAX_PCT  	?= 70
+AVAL_PROB     	?= 0.6
+SEED          	?= 42
 
 .PHONY: py.which py.shell py.deps py.exit py.exit! data.gen data.peek data.clean
 
