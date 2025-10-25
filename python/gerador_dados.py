@@ -26,6 +26,9 @@ DEFAULT_SEED = 42
 # Lista de nível de cursos
 NIVEIS = ["iniciante", "intermediário", "avançado"]
 
+# Lista dos modelos de aulas
+AULA_TIPOS = ["EAD", "hibrido", "presencial"]
+
 # Lista base de categorias iniciais
 CATEGORIA_BASE = [
   "Programação", "Dados", "Design", "Marketing",
@@ -79,6 +82,34 @@ def parse_args() -> argparse.Namespace:
     type=int,
     default=30,
     help="Quantidade de cursos a gerar."
+  )
+
+  parser.add_argument(
+    "--modulos-min",
+    type=int,
+    default=3,
+    help="Mínimo de módulos por curso"
+  )
+
+  parser.add_argument(
+    "--modulos-max",
+    type=int,
+    default=6,
+    help="Máximo de módulos por curso"
+  )
+
+  parser.add_argument(
+    "--aulas-min",
+    type=int,
+    default=3,
+    help="Mínimo de aulas por módulo"
+  )
+
+  parser.add_argument(
+    "--aulas-max",
+    type=int,
+    default=6,
+    help="Máximo de aulas por módulo"
   )
 
 
@@ -342,6 +373,83 @@ def build_cursos(
   return rows
 
 
+def build_modulos(
+  faker,
+  rng,
+  cursos: list[dict],
+  m_min: int,
+  m_max: int,
+) -> tuple[list[dict], dict[int, list[int]]]:
+  """
+  Gera modulos.csv compatível com DDL:
+  - modulo_id, modulo_curso_id (FK), modulo_titulo, modulo_ordem, modulo_descricao, modulo_data_criacao
+  Retorna (rows_modulos, mapa_curso->lista_modulo_id) para a próxima etapa (aulas)
+  """
+  rows: list[dict] = []
+  curso_to_modulos: dict[int, list[int]] = {}
+  now = datetime.now()
+  modulo_id = 1
+
+  for curso in cursos:
+    curso_id = int(curso["curso_id"])
+    qtd = rng.randint(m_min, m_max)
+    curso_to_modulos[curso_id] = []
+    for ordem in range(1, qtd + 1):
+      titulo = f"Módulo {ordem}: {faker.bs().capitalize()}"
+      rows.append({
+        "modulo_id": modulo_id,
+        "modulo_curso_id": curso_id,
+        "modulo_titulo": titulo[:50],
+        "modulo_ordem": ordem,                    # UNIQUE por curso com o par (curso,ordem)
+        "modulo_descricao": faker.sentence(nb_words=12)[:250],
+        "modulo_data_criacao": to_iso(now - timedelta(days=rng.randint(0, 730))),
+      })
+      curso_to_modulos[curso_id].append(modulo_id)
+      modulo_id += 1
+
+  return rows, curso_to_modulos
+
+
+def build_aulas(
+  faker,
+  rng,
+  curso_to_modulos: dict[int, list[int]],
+  a_min: int,
+  a_max: int,
+) -> list[dict]:
+  """
+  Gera aulas.csv compatível com DDL:
+  - aula_id, aula_modulo_id (FK), aula_titulo, aula_ordem, aula_duracao_min, aula_tipo, aula_data_criacao
+  Respeita aula_tipo ∈ {'EAD','hibrido','presencial'} e UNIQUE (modulo, ordem).
+  """
+  rows: list[dict] = []
+  aula_id = 1
+  now = datetime.now()
+
+  # distribuição levemente enviesada para EAD
+  # (soma dos pesos = 10 → EAD 6/10, hibrido 3/10, presencial 1/10)
+  pesos = [6, 3, 1]
+
+  for mod_ids in curso_to_modulos.values():
+    for modulo_id in mod_ids:
+      qtd = rng.randint(a_min, a_max)
+      for ordem in range(1, qtd + 1):
+        tipo = rng.choices(AULA_TIPOS, weights=pesos, k=1)[0]
+        duracao = rng.randint(8, 25) * 3   # múltiplos de 3 min (24–75)
+        rows.append({
+          "aula_id": aula_id,
+          "aula_modulo_id": modulo_id,
+          "aula_titulo": f"Aula {ordem}",
+          "aula_ordem": ordem,           # UNIQUE por módulo com o par (modulo,ordem)
+          "aula_duracao_min": duracao,
+          "aula_tipo": tipo,
+          "aula_data_criacao": to_iso(now - timedelta(days=rng.randint(0, 730))),
+        })
+        aula_id += 1
+
+  return rows
+
+
 def main() -> None:
   """
   Ponto de entrada do gerador (versão mínima).
@@ -415,6 +523,29 @@ def main() -> None:
   write_csv(paths.data_dir / "cursos.csv", cursos, cursos[0].keys())
   log.info(f"cursos.csv: {len(cursos)}")
 
+  # 11. Módulos
+  modulos, curso_to_modulos = build_modulos(
+    faker=faker,
+    rng=rng,
+    cursos=cursos,
+    m_min=args.modulos_min,
+    m_max=args.modulos_max,
+  )
+  write_csv(paths.data_dir / "modulos.csv", modulos, modulos[0].keys() if modulos else
+    ["modulo_id","modulo_curso_id","modulo_titulo","modulo_ordem","modulo_descricao","modulo_data_criacao"])
+  log.info(f"modulos.csv: {len(modulos)}")
+
+  # 12. Aulas
+  aulas = build_aulas(
+    faker=faker,
+    rng=rng,
+    curso_to_modulos=curso_to_modulos,
+    a_min=args.aulas_min,
+    a_max=args.aulas_max,
+  )
+  write_csv(paths.data_dir / "aulas.csv", aulas, aulas[0].keys() if aulas else
+    ["aula_id","aula_modulo_id","aula_titulo","aula_ordem","aula_duracao_min","aula_tipo","aula_data_criacao"])
+  log.info(f"aulas.csv: {len(aulas)}")
 
 
 if __name__ == "__main__":
