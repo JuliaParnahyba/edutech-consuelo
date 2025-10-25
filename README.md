@@ -176,6 +176,17 @@ Comandos principais disponíveis:
 
 <br>
 
+## 🌱 População de Dados (Seeds)
+Os scripts de seed são responsáveis por popular o banco de dados com informações iniciais, garantindo um ambiente pronto para consultas e testes.
+
+### 📂 Estrutura dos seeds
+| Arquivo | Função |
+| ------- | ------ |
+| `sql/seeds/nivel_cursos.sql` | Insere os níveis de curso (*iniciante*, *intermediário*, *avançado*) |
+| `sql/seeds/situacoes_matricula.sql` | Insere as situações padrão de matrícula (*ativa*, *pendente*, *trancada*, *cancelada*) |
+| `sql/seeds/dados.sql` | Popula as tabelas principais com dados coerentes e relacionamentos válidos (categorias, instrutores, cursos, módulos, aulas, alunos e matrículas) |
+
+
 
 ## 🧠 Etapas já implementadas
 | Etapa                                    | Descrição                                                     | Status |
@@ -216,7 +227,7 @@ Todos os comandos abaixo funcionam em Linux, macOS e WSL2 (Windows).
 
 💡 _Dica rápida: execute make help para ver todos os comandos disponíveis com descrição._
 
-### 1️⃣ Subir o ambiente PostgreSQL via Docker
+### Subir o ambiente PostgreSQL via Docker
 ```bash
 make up
 ```
@@ -228,7 +239,7 @@ make up
 docker ps --filter "name=edutech_db"
 ```
 
-### 2️⃣ Criar e aplicar o schema completo
+### Criar e aplicar o schema completo
 ```bash
 make db.apply
 ```
@@ -244,12 +255,41 @@ make db.reset
 ```
 
 - Para apenas remover o schema:
-```
+```bash
 make db.clean
 ```
 
+### Rodar o seed 
+1. Padrão (idempotente)
+```bash
+make db.seed
+```
 
-### 3️⃣ Explorar e validar o banco
+2. Desenvolvimento (limpeza total):
+```bash
+make db.seed-dev
+```
+_Executa os mesmos seeds, mas antes faz `TRUNCATE ... RESTART IDENTITY CASCADE;`, recriando o ambiente do zero — ideal para testar ou reinicializar o banco durante o desenvolvimento._
+
+#### ✅ Validações automáticas
+O `sql/seeds/dados.sql` realiza checagens após o `COMMIT`, exibindo:
+- Total de registros por tabela essencial;
+- Confirmações de integridade mínima (t = true para cada verificação).
+
+Exemplo de saída:
+```bash
+→ Validações pós-seed
+   tabela    | total
+-------------+-------
+ alunos      |     5
+ cursos      |     3
+ ...
+(7 rows)
+✓ Seed concluído
+```
+
+
+### Explorar e validar o banco
 1. Obtém resumo de estrutura e integridade:
 ```bash
 make db.info
