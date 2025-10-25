@@ -214,6 +214,7 @@ def build_especialidades(faker, count: int) -> list[dict]:
       "especialidade_nome": nome,
       "especialidade_descricao": f"Especialidade em {nome}",
       "especialidade_data_criacao": now_iso,
+      "especialidade_data_atualizacao": now_iso,
     })
 
   return rows
@@ -239,6 +240,7 @@ def build_nivel_cursos() -> list[dict]:
       "nivel_curso_nome": nome,
       "nivel_curso_descricao": desc,
       "nivel_curso_data_criacao": now_iso,
+      "nivel_curso_data_atualizacao": now_iso,
   } for (nid, nome, desc) in niveis]
 
 
@@ -262,6 +264,7 @@ def build_situacoes_matricula() -> list[dict]:
     "situacao_matricula_tipo": nome,
     "situacao_matricula_descricao": desc,
     "situacao_matricula_data_criacao": now_iso,
+    "situacao_matricula_data_atualizacao": now_iso,
   } for (sid, nome, desc) in tipos]
 
 
@@ -331,6 +334,7 @@ def build_instrutores(faker, count: int, rng, especialidade_ids: list[int]) -> t
       "instrutor_especial_principal_id": principal_id,
       "instrutor_biografia": bio[:300],
       "instrutor_data_criacao": to_iso(created_at),
+      "instrutor_data_atualizacao": to_iso(created_at),
     })
 
     # Especialidades extras (0–2) — N:N
@@ -347,6 +351,7 @@ def build_instrutores(faker, count: int, rng, especialidade_ids: list[int]) -> t
           "ie_instrutor_id": idx,
           "ie_especialidade_id": e,
           "ie_data_criacao": to_iso(created_at),
+          "ie_data_atualizacao": to_iso(created_at),
         })
 
   return rows_instrutores, rows_ie
@@ -378,6 +383,7 @@ def build_alunos(faker, count: int, rng) -> list[dict]:
       "aluno_email": email,
       "aluno_data_nascimento": nasc.isoformat(),   # YYYY-MM-DD
       "aluno_data_criacao": to_iso(created_at),
+      "aluno_data_atualizacao": to_iso(created_at),
     })
   return rows
 
@@ -433,7 +439,7 @@ def build_cursos(
       "curso_carga_horaria": carga_horaria,
       "curso_preco": f"{preco:.2f}",
       "curso_data_criacao": to_iso(created_at),
-      # opcional: "curso_data_atualizacao": to_iso(created_at),
+      "curso_data_atualizacao": to_iso(created_at),
     })
 
   return rows
@@ -469,6 +475,7 @@ def build_modulos(
         "modulo_ordem": ordem,                    # UNIQUE por curso com o par (curso,ordem)
         "modulo_descricao": faker.sentence(nb_words=12)[:250],
         "modulo_data_criacao": to_iso(now - timedelta(days=rng.randint(0, 730))),
+        "modulo_data_atualizacao": to_iso(now - timedelta(days=rng.randint(0, 730))),
       })
       curso_to_modulos[curso_id].append(modulo_id)
       modulo_id += 1
@@ -510,6 +517,7 @@ def build_aulas(
           "aula_duracao_min": duracao,
           "aula_tipo": tipo,
           "aula_data_criacao": to_iso(now - timedelta(days=rng.randint(0, 730))),
+          "aula_data_atualizacao": to_iso(now - timedelta(days=rng.randint(0, 730))),
         })
         aula_id += 1
 
@@ -624,6 +632,7 @@ def build_matriculas(
       "matricula_data_conclusao": to_iso(dt_conclusao) if dt_conclusao else "",
       "matricula_diploma": str(diploma).lower(),   # 'true' / 'false'
       "matricula_data_criacao": to_iso(dt_matricula),
+      "matricula_data_atualizacao": to_iso(dt_matricula),
     })
 
   return rows
@@ -733,6 +742,7 @@ def build_progresso_aulas(
         "progresso_data_conclusao": to_iso(dt_conc) if dt_conc else "",
         "progresso_tempo_assistido_min": tempo_assistido,
         "progresso_data_criacao": to_iso(dt_ref),
+        "progresso_data_atualizacao": to_iso(dt_ref),
       })
 
   return rows
@@ -791,7 +801,8 @@ def build_avaliacoes(
       "avaliacao_aula_id": aula_id,
       "avaliacao_nota": nota,
       "avaliacao_comentario": comentario,
-      "avaliacao_data_avaliacao": to_iso(dt),
+      "avaliacao_data_criacao": to_iso(dt),
+      "avaliacao_data_atualizacao": to_iso(dt),
     })
 
   return rows
@@ -926,7 +937,7 @@ def main() -> None:
       "progresso_concluida","progresso_data_conclusao","progresso_tempo_assistido_min","progresso_data_criacao"])
   log.info(f"progresso_aulas.csv: {len(progresso)}")
 
-# 16. Avaliações
+  # 16. Avaliações
   avaliacoes = build_avaliacoes(
     rng=rng,
     progresso=progresso,
@@ -937,9 +948,6 @@ def main() -> None:
     avaliacoes[0].keys() if avaliacoes else
     ["avaliacao_id","avaliacao_aluno_id","avaliacao_aula_id","avaliacao_nota","avaliacao_comentario","avaliacao_data_avaliacao"])
   log.info(f"avaliacoes.csv: {len(avaliacoes)}")
-
-
-
 
 if __name__ == "__main__":
   main()

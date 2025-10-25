@@ -143,24 +143,25 @@ db.info: ## Mostra info resumida: schemas, tabelas, índices, triggers e FKs
 
 db.load-csv: ## Carrega CSVs de /data no schema edutech via \copy (ordem correta)
 	$(call banner,Carregando CSVs no Postgres (schema edutech))
-	@$(PG_CMD) -c "\copy edutech.categorias               (categoria_id,categoria_nome,categoria_descricao,categoria_data_criacao)                                   from 'data/categorias.csv'               with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.especialidades           (especialidade_id,especialidade_nome,especialidade_descricao,especialidade_data_criacao)                   from 'data/especialidades.csv'           with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.nivel_cursos             (nivel_curso_id,nivel_curso_nome,nivel_curso_descricao,nivel_curso_data_criacao)                           from 'data/nivel_cursos.csv'             with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.situacoes_matricula      (situacao_matricula_id,situacao_matricula_tipo,situacao_matricula_descricao,situacao_matricula_data_criacao) from 'data/situacoes_matricula.csv'      with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.categorias (categoria_id,categoria_nome,categoria_descricao,categoria_data_criacao,categoria_data_atualizacao) from 'data/categorias.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.especialidades (especialidade_id,especialidade_nome,especialidade_descricao,especialidade_data_criacao,especialidade_data_atualizacao) from 'data/especialidades.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.nivel_cursos (nivel_curso_id,nivel_curso_nome,nivel_curso_descricao,nivel_curso_data_criacao,nivel_curso_data_atualizacao) from 'data/nivel_cursos.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.situacoes_matricula (situacao_matricula_id,situacao_matricula_tipo,situacao_matricula_descricao,situacao_matricula_data_criacao,situacao_matricula_data_atualizacao) from 'data/situacoes_matricula.csv' with (format csv, header true)"
 
-	@$(PG_CMD) -c "\copy edutech.instrutores              (instrutor_id,instrutor_primeiro_nome,instrutor_ultimo_nome,instrutor_email,instrutor_especial_principal_id,instrutor_biografia,instrutor_data_criacao) from 'data/instrutores.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.instrutor_especialidades (ie_instrutor_id,ie_especialidade_id,ie_data_criacao)                                                       from 'data/instrutor_especialidades.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.instrutores (instrutor_id,instrutor_primeiro_nome,instrutor_ultimo_nome,instrutor_email,instrutor_especial_principal_id,instrutor_biografia,instrutor_data_criacao,instrutor_data_atualizacao) from 'data/instrutores.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.instrutor_especialidades (ie_instrutor_id,ie_especialidade_id,ie_data_criacao,ie_data_atualizacao) from 'data/instrutor_especialidades.csv' with (format csv, header true)"
 
-	@$(PG_CMD) -c "\copy edutech.cursos                   (curso_id,curso_titulo,curso_descricao,curso_categoria_id,curso_instrutor_id,curso_nivel_id,curso_carga_horaria,curso_preco,curso_data_criacao) from 'data/cursos.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.modulos                  (modulo_id,modulo_curso_id,modulo_titulo,modulo_ordem,modulo_descricao,modulo_data_criacao)                from 'data/modulos.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.aulas                    (aula_id,aula_modulo_id,aula_titulo,aula_ordem,aula_duracao_min,aula_tipo,aula_data_criacao)               from 'data/aulas.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.cursos (curso_id,curso_titulo,curso_descricao,curso_categoria_id,curso_instrutor_id,curso_nivel_id,curso_carga_horaria,curso_preco,curso_data_criacao,curso_data_atualizacao) from 'data/cursos.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.modulos (modulo_id,modulo_curso_id,modulo_titulo,modulo_ordem,modulo_descricao,modulo_data_criacao,modulo_data_atualizacao) from 'data/modulos.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.aulas (aula_id,aula_modulo_id,aula_titulo,aula_ordem,aula_duracao_min,aula_tipo,aula_data_criacao,aula_data_atualizacao) from 'data/aulas.csv' with (format csv, header true)"
 
-	@$(PG_CMD) -c "\copy edutech.alunos                   (aluno_id,aluno_primeiro_nome,aluno_ultimo_nome,aluno_email,aluno_data_nascimento,aluno_data_criacao)       from 'data/alunos.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.matriculas               (matricula_id,matricula_aluno_id,matricula_curso_id,matricula_situacao_id,matricula_num_matricula,matricula_data_matricula,matricula_valor_pago,matricula_data_conclusao,matricula_diploma,matricula_data_criacao) from 'data/matriculas.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.alunos (aluno_id,aluno_primeiro_nome,aluno_ultimo_nome,aluno_email,aluno_data_nascimento,aluno_data_criacao,aluno_data_atualizacao) from 'data/alunos.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.matriculas (matricula_id,matricula_aluno_id,matricula_curso_id,matricula_situacao_id,matricula_num_matricula,matricula_data_matricula,matricula_valor_pago,matricula_data_conclusao,matricula_diploma,matricula_data_criacao,matricula_data_atualizacao) from 'data/matriculas.csv' with (format csv, header true)"
 
-	@$(PG_CMD) -c "\copy edutech.progresso_aulas          (progresso_id,progresso_matricula_id,progresso_aula_id,progresso_percentual,progresso_concluida,progresso_data_conclusao,progresso_tempo_assistido_min,progresso_data_criacao) from 'data/progresso_aulas.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.avaliacoes               (avaliacao_id,avaliacao_aluno_id,avaliacao_aula_id,avaliacao_nota,avaliacao_comentario,avaliacao_data_avaliacao) from 'data/avaliacoes.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.progresso_aulas (progresso_id,progresso_matricula_id,progresso_aula_id,progresso_percentual,progresso_concluida,progresso_data_conclusao,progresso_tempo_assistido_min,progresso_data_criacao,progresso_data_atualizacao) from 'data/progresso_aulas.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.avaliacoes (avaliacao_id,avaliacao_aluno_id,avaliacao_aula_id,avaliacao_nota,avaliacao_comentario,avaliacao_data_criacao,avaliacao_data_atualizacao) from 'data/avaliacoes.csv' with (format csv, header true)"
 	$(call ok,Carga dos CSVs concluída)
+
 
 db.query: ## Executa consultas analíticas em sql/queries/queries.sql
 	$(call spin,Executando consultas (queries.sql), $(PG_CMD) -f sql/queries/queries.sql)

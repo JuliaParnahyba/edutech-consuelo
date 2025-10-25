@@ -166,6 +166,6 @@ CREATE TABLE IF NOT EXISTS avaliacoes (
 
     UNIQUE (avaliacao_aluno_id, avaliacao_aula_id),
 
-    avaliacao_data_avaliacao            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    avaliacao_data_criacao              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     avaliacao_data_atualizacao          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

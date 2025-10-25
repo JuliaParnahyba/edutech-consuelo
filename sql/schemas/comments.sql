@@ -134,6 +134,6 @@ COMMENT ON COLUMN edutech.avaliacoes.avaliacao_aluno_id IS 'FK para alunos.aluno
 COMMENT ON COLUMN edutech.avaliacoes.avaliacao_aula_id IS 'FK para aulas.aula_id (aula avaliada).';
 COMMENT ON COLUMN edutech.avaliacoes.avaliacao_nota IS 'Nota de 0 a 5.';
 COMMENT ON COLUMN edutech.avaliacoes.avaliacao_comentario IS 'Comentário opcional (até 150 chars).';
-COMMENT ON COLUMN edutech.avaliacoes.avaliacao_data_avaliacao IS 'Data/hora em que a avaliação foi registrada.';
+COMMENT ON COLUMN edutech.avaliacoes.avaliacao_data_criacao IS 'Data/hora em que a avaliação foi registrada.';
 COMMENT ON COLUMN edutech.avaliacoes.avaliacao_data_atualizacao IS 'Atualizado em (trigger BEFORE UPDATE).';
 -- 
