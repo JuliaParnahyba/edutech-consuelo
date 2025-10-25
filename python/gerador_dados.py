@@ -13,9 +13,10 @@
 from __future__ import annotations
 import argparse
 import random
+import string
 from typing import Any, Set
 from faker import Faker
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from utils import resolve_paths, setup_logger, write_csv, to_iso
 
 # -----------------------------
@@ -112,6 +113,20 @@ def parse_args() -> argparse.Namespace:
     help="Máximo de aulas por módulo"
   )
 
+  parser.add_argument(
+    "--matriculas",
+    type=int,
+    default=600,
+    help="Quantidade de matrículas a gerar."
+  )
+
+  parser.add_argument(
+    "--alunos",
+    type=int,
+    default=250,
+    help="Quantidade de alunos a gerar.",
+  )
+
 
   return parser.parse_args()
 
@@ -148,6 +163,7 @@ def build_categorias(faker, count: int) -> list[dict]:
     })
   
   return rows
+
 
 def build_especialidades(faker, count: int) -> list[dict]:
   """
@@ -316,6 +332,36 @@ def build_instrutores(faker, count: int, rng, especialidade_ids: list[int]) -> t
   return rows_instrutores, rows_ie
 
 
+def random_birthdate(rng, min_age=18, max_age=60) -> date:
+  today = datetime.now().date()
+  age = rng.randint(min_age, max_age)
+  days_spread = rng.randint(0, 364)
+
+  return date(today.year - age, 1, 1) + timedelta(days=days_spread)
+
+
+def build_alunos(faker, count: int, rng) -> list[dict]:
+  rows: list[dict] = []
+  seen_emails: Set[str] = set()
+  now = datetime.now()
+
+  for idx in range(1, count + 1):
+    nome = faker.name()
+    first, last = split_first_last(nome)
+    email = unique_email(faker, seen_emails)
+    nasc = random_birthdate(rng, 18, 60)
+    created_at = now - timedelta(days=rng.randint(0, 730))
+    rows.append({
+      "aluno_id": idx,
+      "aluno_primeiro_nome": first[:50],
+      "aluno_ultimo_nome": last[:50],
+      "aluno_email": email,
+      "aluno_data_nascimento": nasc.isoformat(),   # YYYY-MM-DD
+      "aluno_data_criacao": to_iso(created_at),
+    })
+  return rows
+
+
 def build_cursos(
   faker,
   count: int,
@@ -450,6 +496,119 @@ def build_aulas(
   return rows
 
 
+def gen_matricula_num(rng, dt: datetime, seq: int) -> str:
+  """
+  Gera número no padrão AAMMSS####:
+    AA = ano (2 dígitos)
+    MM = mês (2 dígitos)
+    SS = semestre (01 se mês 1..6, 02 se mês 7..12)
+    #### = sequência aleatória de 4 dígitos (0000-9999)
+  
+  Exemplo: 2510024567 → ano 2025, mês 10, 2º semestre, seq 4567
+  """
+  AA = dt.strftime("%y")
+  MM = dt.strftime("%m")
+  SS = "01" if dt.month <= 6 else "02"
+  seq4 = f"{rng.randint(0, 9999):04d}"
+  return f"{AA}{MM}{SS}{seq4}"
+
+
+def build_matriculas(
+  rng,
+  alunos: list[dict],
+  cursos: list[dict],
+  situacoes: list[dict],
+  count: int,
+) -> list[dict]:
+  """
+  Gera matrículas garantindo:
+  - unicidade (aluno, curso)
+  - situação válida (FK)
+  - número AASSMM#### único (global)
+  - valor pago coerente com curso_preco
+  - conclusão/diploma somente se situacao == 'concluída'
+  """
+  rows: list[dict] = []
+  seen_pairs: set[tuple[int, int]] = set()
+  used_numbers: set[str] = set()
+  attempts = 0
+  max_attempts = count * 10
+  now = datetime.now()
+
+  # mapas auxiliares
+  curso_by_id = {c["curso_id"]: c for c in cursos}
+  aluno_ids = [a["aluno_id"] for a in alunos]
+  curso_ids = [c["curso_id"] for c in cursos]
+
+  # id da situação "concluída"
+  concluida_id = next(
+    s["situacao_matricula_id"]
+    for s in situacoes
+    if s["situacao_matricula_tipo"] == "concluída"
+  )
+
+  # distribuição de situações
+  dist_ids = [s["situacao_matricula_id"] for s in situacoes]
+  pesos = []
+  for s in situacoes:
+    t = s["situacao_matricula_tipo"]
+    pesos.append({"ativa": 6, "concluída": 3, "cancelada": 1, "pendente": 2}[t])
+
+  while len(rows) < count and attempts < max_attempts:
+    attempts += 1
+
+    # escolhe um par (aluno, curso) ainda não usado
+    aluno_id = rng.choice(aluno_ids)
+    curso_id = rng.choice(curso_ids)
+    if (aluno_id, curso_id) in seen_pairs:
+      continue
+    seen_pairs.add((aluno_id, curso_id))
+
+    # data + situação
+    dt_matricula = now - timedelta(days=rng.randint(0, 730))
+    situacao_id = rng.choices(dist_ids, weights=pesos, k=1)[0]
+
+    # valor pago: 70–100% do preço do curso
+    preco = float(curso_by_id[curso_id]["curso_preco"])
+    fator = rng.uniform(0.7, 1.0)
+    valor_pago = round(preco * fator, 2)
+
+    # número AAMMSS#### único
+    tries = 0
+    while True:
+      num = gen_matricula_num(rng, dt_matricula, 4)
+      if num not in used_numbers:
+        used_numbers.add(num)
+        break
+      tries += 1
+      if tries > 20:
+        dt_matricula = dt_matricula - timedelta(days=1)
+        tries = 0
+
+    # conclusão/diploma
+    if situacao_id == concluida_id:
+      dt_conclusao = dt_matricula + timedelta(days=rng.randint(7, 365))
+      diploma = rng.choice([True, False, True])  # leve viés para True
+    else:
+      dt_conclusao = None
+      diploma = False
+
+    rows.append({
+      "matricula_id": len(rows) + 1,
+      "matricula_aluno_id": aluno_id,
+      "matricula_curso_id": curso_id,
+      "matricula_situacao_id": situacao_id,
+      "matricula_num_matricula": num,
+      "matricula_data_matricula": to_iso(dt_matricula),
+      "matricula_valor_pago": f"{valor_pago:.2f}",
+      "matricula_data_conclusao": to_iso(dt_conclusao) if dt_conclusao else "",
+      "matricula_diploma": str(diploma).lower(),   # 'true' / 'false'
+      "matricula_data_criacao": to_iso(dt_matricula),
+    })
+
+  return rows
+
+
 def main() -> None:
   """
   Ponto de entrada do gerador (versão mínima).
@@ -511,7 +670,13 @@ def main() -> None:
     instrutor_especialidades[0].keys() if instrutor_especialidades else ["ie_instrutor_id","ie_especialidade_id","ie_data_criacao"])
   log.info(f"instrutor_especialidades.csv: {len(instrutor_especialidades)} links")
 
-  # 10. Gerar cursos
+  # 10 Alunos (gerar antes das matrículas)
+  alunos = build_alunos(faker, args.alunos, rng)
+  write_csv(paths.data_dir / "alunos.csv", alunos, alunos[0].keys())
+  log.info(f"alunos.csv: {len(alunos)}")
+
+
+  # 11. Gerar cursos
   cursos = build_cursos(
     faker=faker,
     count=args.cursos,
@@ -523,7 +688,7 @@ def main() -> None:
   write_csv(paths.data_dir / "cursos.csv", cursos, cursos[0].keys())
   log.info(f"cursos.csv: {len(cursos)}")
 
-  # 11. Módulos
+  # 12. Módulos
   modulos, curso_to_modulos = build_modulos(
     faker=faker,
     rng=rng,
@@ -535,7 +700,7 @@ def main() -> None:
     ["modulo_id","modulo_curso_id","modulo_titulo","modulo_ordem","modulo_descricao","modulo_data_criacao"])
   log.info(f"modulos.csv: {len(modulos)}")
 
-  # 12. Aulas
+  # 13. Aulas
   aulas = build_aulas(
     faker=faker,
     rng=rng,
@@ -546,6 +711,18 @@ def main() -> None:
   write_csv(paths.data_dir / "aulas.csv", aulas, aulas[0].keys() if aulas else
     ["aula_id","aula_modulo_id","aula_titulo","aula_ordem","aula_duracao_min","aula_tipo","aula_data_criacao"])
   log.info(f"aulas.csv: {len(aulas)}")
+
+  # 14. Matrículas
+  matriculas = build_matriculas(
+    rng=rng,
+    alunos=alunos,
+    cursos=cursos,
+    situacoes=situacoes,
+    count=args.matriculas,
+  )
+  write_csv(paths.data_dir / "matriculas.csv", matriculas, matriculas[0].keys())
+  log.info(f"matriculas.csv: {len(matriculas)} (pares aluno-curso únicos)")
+
 
 
 if __name__ == "__main__":
