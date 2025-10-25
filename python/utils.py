@@ -105,29 +105,3 @@ def to_iso(dt: datetime) -> str:
         str: string formatada no padrão 'YYYY-MM-DD HH:MM:SS'
     """
     return dt.strftime("%Y-%m-%d %H:%M:%S")
-
-
-def formatar_dinheiro(valor):
-    '''
-    Formata valores monetários
-    '''
-
-def calcular_taxa_conclusao(aulas_concluidas, total_aulas):
-    '''
-    Calcula percentual
-    '''
-
-def validar_email(email):
-    '''
-    Valida formato de email
-    '''
-
-def gerar_senha_hash():
-    '''
-    Simula geração de senha (preparação para API futura)
-    '''
-
-def formatar_data(data):
-    '''
-    Padroniza formato de datas
-    '''

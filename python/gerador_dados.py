@@ -14,6 +14,8 @@ from __future__ import annotations
 import argparse
 import random
 import string
+import unicodedata
+import re
 from typing import Any, Set
 from faker import Faker
 from datetime import datetime, timedelta, date
@@ -22,6 +24,8 @@ from utils import resolve_paths, setup_logger, write_csv, to_iso
 # -----------------------------
 # Configurações padrão
 # -----------------------------
+EDUTECH_DOMAIN = "edutech.com.br"
+
 DEFAULT_SEED = 42
 
 # Lista de nível de cursos
@@ -285,15 +289,25 @@ def split_first_last(full_name: str) -> tuple[str, str]:
   return " ".join(parts[:-1]), parts[-1]
 
 
-def unique_email(faker, existing: Set[str]) -> str:
+def remove_honorifics(name: str) -> str:
   """
-  Gera um email único usando o Faker, garantindo que não repita
+  Remove títulos de tratamento comuns em nomes gerados pelo Faker:
+  - Sr., Sra., Srta., Dr., Dra. (e variações com/sem ponto e com acentos)
+  
+  Exemplos:
+    "Sr. João da Silva"   -> "João da Silva"
+    "Dra Maria Fernanda"  -> "Maria Fernanda"
+    "Srta. Ana"           -> "Ana"
   """
-  while True:
-    e = faker.unique.email()
-    if e not in existing:
-      existing.add(e)
-      return e
+  # Expressão cobre início e meio do nome, case-insensitive
+  pattern = r"(?i)\b(sr\.?|sra\.?|srª\.?|srta\.?|sª\.?|dr\.?|dra\.?|drª\.?)\b\.?"
+
+  # Remove em qualquer posição, substituindo por um espaço único
+  cleaned = re.sub(pattern, " ", name)
+  # Remove espaços duplicados
+  cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+  return cleaned
 
 
 def build_instrutores(faker, count: int, rng, especialidade_ids: list[int]) -> tuple[list[dict], list[dict]]:
@@ -310,6 +324,7 @@ def build_instrutores(faker, count: int, rng, especialidade_ids: list[int]) -> t
   Returns:
     tuple[list[dict], list[dict]]: registros de instrutores_rows, instrutor_especialidades_rows
   """
+  from utils_email import instrutor_email_from_name
 
   rows_instrutores: list[dict] = []
   rows_ie: list[dict] = []
@@ -317,9 +332,10 @@ def build_instrutores(faker, count: int, rng, especialidade_ids: list[int]) -> t
   now = datetime.now()
 
   for idx in range(1, count + 1):
-    nome = faker.name()
+    nome_raw = faker.name()
+    nome = remove_honorifics(nome_raw)
     first, last = split_first_last(nome)
-    email = unique_email(faker, seen_emails)
+    email = instrutor_email_from_name(first, last, seen_emails)
     bio = faker.sentence(nb_words=12)
     created_at = now - timedelta(days=rng.randint(0, 800))
 
@@ -366,15 +382,18 @@ def random_birthdate(rng, min_age=18, max_age=60) -> date:
 
 
 def build_alunos(faker, count: int, rng) -> list[dict]:
+  from utils_email import aluno_email_from_birthyear
+
   rows: list[dict] = []
   seen_emails: Set[str] = set()
   now = datetime.now()
 
   for idx in range(1, count + 1):
-    nome = faker.name()
+    nome_raw = faker.name()
+    nome = remove_honorifics(nome_raw)
     first, last = split_first_last(nome)
-    email = unique_email(faker, seen_emails)
     nasc = random_birthdate(rng, 18, 60)
+    email = aluno_email_from_birthyear(last, nasc, seen_emails)
     created_at = now - timedelta(days=rng.randint(0, 730))
     rows.append({
       "aluno_id": idx,
