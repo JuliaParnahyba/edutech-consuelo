@@ -87,6 +87,192 @@ EDUTECH-CONSUELO/
 
 <br>
 
+## 🧠 Etapas já implementadas
+| Etapa | Descrição | Status |
+| ----- | --------- | ------ |
+| **[01] Setup inicial** | Estrutura de diretórios, Makefile, CLI GitHub | ✅ |
+| **[02] Criação e implementação do BD, com seed inicial** | Entidades e relacionamentos normalizados, Tabelas, índices, triggers, comentários e políticas ON DELETE | ✅ |
+| **[03] Geração de Dados (Python)** | Scripts de população e validação automatizada | 🔜 |
+| **[04] Consultas e Views Analíticas** | Criação de relatórios SQL e agregações | 🔜 |
+
+<br>
+
+## 🧭 Execução Geral do Projeto com Makefile
+A automação do ambiente está feita via **Makefile**, garantindo portabilidade e reprodutibilidade.
+Todos os comandos abaixo funcionam em Linux, macOS e WSL2 (Windows).
+
+> <br> 
+> 
+> Comandos principais disponíveis:
+> | Comando            | Descrição                                                            |
+> | -----------------: | :------------------------------------------------------------------- |
+> | `make up`          | Sobe os containers Docker (`PostgreSQL` + `Adminer`)                 |
+> | `make down`        | Derruba os containers (mantém o volume e os dados)                   |
+> | `make down-v`      | Derruba containers **e** remove o volume (reset total do banco)      |
+> | `make env`         | Exibe as variáveis de ambiente efetivas de conexão                   |
+> | `make db.apply`    | Executa o `deploy.sql` (cria ou atualiza o schema completo do banco) |
+> | `make db.clean`    | Remove apenas o schema `edutech` (mantendo o banco e usuários)       |
+> | `make db.reset`    | Dropa e recria todo o schema, aplicando o `deploy.sql` do zero       |
+> | `make db.seed`     | Executa os **seeds** de dados idempotentes (sem apagar os registros) |
+> | `make db.seed-dev` | Executa os **seeds** com `TRUNCATE + RESTART IDENTITY` (modo DEV)    |
+> | `make db.shell`    | Abre uma sessão interativa `psql` conectada ao banco `edutech`       |
+> | `make db.info`     | Exibe um resumo das tabelas, índices, triggers e FKs do schema       |
+> | `make db.query`    | Executa as consultas analíticas em `sql/queries/queries.sql`         |
+> | `make help`        | Mostra a lista completa de comandos disponíveis e suas descrições    |
+>
+> 
+> <br>
+
+💡 _Dica rápida: execute make help para ver todos os comandos disponíveis com descrição._
+
+<br>
+
+### Subir o ambiente PostgreSQL via Docker
+```bash
+make up
+```
+1. Cria e inicializa o container PostgreSQL definido no docker-compose.yml.
+2. Usa as variáveis de conexão padrão ou definidas no .env.
+3. Executa container Adminer para acesso via interface web.
+
+<br>
+
+- _Verificar se o container está ativo:_
+```bash
+docker ps --filter "name=edutech_db"
+```
+<br>
+
+### 🔍 Acessar o banco via Adminer
+Abra o navegador [http://localhost:8080](http://localhost:8080) e preenchar os campos para realizar o login
+
+| Campo        | Valor recomendado |
+| -----------: | :---------------- |
+| **System**   | PostgreSQL        |
+| **Server**   | `db`              |
+| **Username** | `edutech_admin`   |
+| **Password** | `sua_senha`       |
+| **Database** | `edutech`         |
+
+<br>
+
+![Login Adminer](/docs/src_img/image.png)
+
+<br>
+
+### Criar e aplicar o schema completo
+```bash
+make db.apply
+```
+_Executa o script sql/deploy.sql, que orquestra:_
+  1. Criação do schema edutech
+  2. Geração de todas as tabelas, índices e constraints
+  3. Criação dos triggers (updated_at)
+  4. Inserção de comentários e metadados
+
+<br>
+
+- Para recriar o zero:
+```bash
+make db.reset
+```
+
+<br>
+
+- Para apenas remover o schema:
+```bash
+make db.clean
+```
+
+<br>
+
+### Rodar o seed 
+1. Padrão (idempotente)
+```bash
+make db.seed
+```
+
+<br>
+
+2. Desenvolvimento (limpeza total):
+```bash
+make db.seed-dev
+```
+_Executa os mesmos seeds, mas antes faz `TRUNCATE ... RESTART IDENTITY CASCADE;`, recriando o ambiente do zero — ideal para testar ou reinicializar o banco durante o desenvolvimento._
+
+<br>
+
+#### ✅ Validações automáticas
+O `sql/seeds/dados.sql` realiza checagens após o `COMMIT`, exibindo:
+- Total de registros por tabela essencial;
+- Confirmações de integridade mínima (t = true para cada verificação).
+
+<br>
+
+Exemplo de saída:
+```bash
+→ Validações pós-seed
+   tabela    | total
+-------------+-------
+ alunos      |     5
+ cursos      |     3
+ ...
+(7 rows)
+✓ Seed concluído
+```
+
+<br>
+
+### Explorar e validar o banco
+1. Obtém resumo de estrutura e integridade:
+```bash
+make db.info
+```
+Mostra os seguintes dados:
+  1. Schemas disponíveis
+  2. Tabelas e índices do schema `edutech`
+  3. Triggers ativos
+  4. Regras `ON DELETE` de todas as FKs
+
+<br>
+
+2. Abrir sessão interativa do PostgreSQL:
+```bash
+make db.shell
+```
+_Entra diretamente no prompt edutech=# autenticado com as credenciais configuradas. Ideal para testes manuais e consultas rápidas._
+
+<br>
+
+### Executar consultas analíticasExecutar consultas e relatórios
+```bash
+make db.query
+```
+_Executa automaticamente o script `sql/queries/queries.sql` usando as variáveis de conexão definidas no `.env` ou de conexão padrão contidas no Makefile._
+
+<br>
+
+### Encerrar ou reiniciar containers
+1. Parar o container sem apagar os dados:
+```bash
+make down
+```
+<br>
+
+2. Parar e apagar o volume (reset total):
+```bash
+make down-v
+```
+<br>
+
+### Conferir ambiente atual
+```bash
+make env
+```
+_Exibe o host, porta, usuário e banco utilizados pelos comandos automáticos._
+
+<br>
+
 ## 🛳️ Executar PostgreSQL + Adminer via Docker
 
 <br>
@@ -120,23 +306,6 @@ Sobe dois serviços:
 
 <br>
 
-### 🔍 Acessar o banco via Adminer
-Abra o navegador [http://localhost:8080](http://localhost:8080) e preenchar os campos para realizar o login
-
-| Campo        | Valor recomendado                           |
-| ------------ | ------------------------------------------- |
-| **System**   | PostgreSQL                                  |
-| **Server**   | `db` (dentro da rede Docker) ou `localhost` |
-| **Username** | `edutech_admin`                             |
-| **Password** | `sua_senha`                               |
-| **Database** | `edutech`                                   |
-
-<br>
-
-![Login Adminer](/docs/src_img/image.png)
-
-<br>
-
 ### 🔎 Verificar status:
 ```bash
 docker ps --filter "name=edutech_db"
@@ -157,22 +326,7 @@ PGPASSWORD=sua_senha psql -h 127.0.0.1 -p 5433 -U edutech_admin -d edutech -c "S
 docker compose down         # para e mantém dados
 docker compose down -v      # ⚠️ remove também o volume (zera o banco)
 ```
-
-<br>
-
 _Os scripts em ./sql são executados automaticamente apenas na primeira inicialização do volume pgdata._
-
-
-<br>
-
-## 🧩 Automação via Makefile
-Comandos principais disponíveis:
-| Comando         | Descrição                                              |
-| --------------- | ------------------------------------------------------ |
-| `make db.apply` | Executa o `deploy.sql` (cria/atualiza schema completo) |
-| `make db.clean` | Remove apenas o schema `edutech`                       |
-| `make db.reset` | Dropa e recria o schema completo                       |
-| `make db.info`  | Exibe tabelas e funções do schema atual                |
 
 <br>
 
@@ -181,21 +335,10 @@ Os scripts de seed são responsáveis por popular o banco de dados com informaç
 
 ### 📂 Estrutura dos seeds
 | Arquivo | Função |
-| ------- | ------ |
+| ------: | :----- |
 | `sql/seeds/nivel_cursos.sql` | Insere os níveis de curso (*iniciante*, *intermediário*, *avançado*) |
 | `sql/seeds/situacoes_matricula.sql` | Insere as situações padrão de matrícula (*ativa*, *pendente*, *trancada*, *cancelada*) |
 | `sql/seeds/dados.sql` | Popula as tabelas principais com dados coerentes e relacionamentos válidos (categorias, instrutores, cursos, módulos, aulas, alunos e matrículas) |
-
-
-
-## 🧠 Etapas já implementadas
-| Etapa                                    | Descrição                                                     | Status |
-| ---------------------------------------- | ------------------------------------------------------------- | ------ |
-| **[01] Setup inicial**                   | Estrutura de diretórios, Makefile, CLI GitHub                 | ✅      |
-| **[02.01] Modelagem Lógica**             | Entidades e relacionamentos normalizados                      | ✅      |
-| **[02.02] Implementação SQL**            | Tabelas, índices, triggers, comentários e políticas ON DELETE | ✅      |
-| **[02.03] Geração de Dados (Python)**    | Scripts de população e validação automatizada                 | 🔜     |
-| **[02.04] Consultas e Views Analíticas** | Criação de relatórios SQL e agregações                        | 🔜     |
 
 <br>
 
@@ -216,122 +359,7 @@ source .venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 ```
 
-💡 _O ambiente virtual .venv já está incluído no .gitignore para evitar versionamento.
-Todas as dependências utilizadas no projeto serão registradas em requirements.txt._
-
-<br>
-
-## 🧭 Execução Geral do Projeto
-A automação do ambiente é feita via **Makefile**, garantindo portabilidade e reprodutibilidade.
-Todos os comandos abaixo funcionam em Linux, macOS e WSL2 (Windows).
-
-💡 _Dica rápida: execute make help para ver todos os comandos disponíveis com descrição._
-
-### Subir o ambiente PostgreSQL via Docker
-```bash
-make up
-```
-1. Cria e inicializa o container PostgreSQL definido no docker-compose.yml.
-2. Usa as variáveis de conexão padrão ou definidas no .env.
-
-- _Verificar se o container está ativo:_
-```bash
-docker ps --filter "name=edutech_db"
-```
-
-### Criar e aplicar o schema completo
-```bash
-make db.apply
-```
-_Executa o script sql/deploy.sql, que orquestra:_
-  1. Criação do schema edutech
-  2. Geração de todas as tabelas, índices e constraints
-  3. Criação dos triggers (updated_at)
-  4. Inserção de comentários e metadados
-
-- Para recriar o zero:
-```bash
-make db.reset
-```
-
-- Para apenas remover o schema:
-```bash
-make db.clean
-```
-
-### Rodar o seed 
-1. Padrão (idempotente)
-```bash
-make db.seed
-```
-
-2. Desenvolvimento (limpeza total):
-```bash
-make db.seed-dev
-```
-_Executa os mesmos seeds, mas antes faz `TRUNCATE ... RESTART IDENTITY CASCADE;`, recriando o ambiente do zero — ideal para testar ou reinicializar o banco durante o desenvolvimento._
-
-#### ✅ Validações automáticas
-O `sql/seeds/dados.sql` realiza checagens após o `COMMIT`, exibindo:
-- Total de registros por tabela essencial;
-- Confirmações de integridade mínima (t = true para cada verificação).
-
-Exemplo de saída:
-```bash
-→ Validações pós-seed
-   tabela    | total
--------------+-------
- alunos      |     5
- cursos      |     3
- ...
-(7 rows)
-✓ Seed concluído
-```
-
-
-### Explorar e validar o banco
-1. Obtém resumo de estrutura e integridade:
-```bash
-make db.info
-```
-Mostra os seguintes dados:
-  1. Schemas disponíveis
-  2. Tabelas e índices do schema `edutech`
-  3. Triggers ativos
-  4. Regras `ON DELETE` de todas as FKs
-
-
-2. Abrir sessão interativa do PostgreSQL:
-```bash
-make db.shell
-```
-_Entra diretamente no prompt edutech=# autenticado com as credenciais configuradas.
-Ideal para testes manuais e consultas rápidas._
-
-
-### 4️⃣ Executar consultas analíticasExecutar consultas e relatórios
-```bash
-make db.query
-```
-_Executa automaticamente o script `sql/queries/queries.sql` usando as variáveis de conexão definidas no `.env` ou de conexão padrão contidas no Makefile._
-
-### 5️⃣ Encerrar ou reiniciar containers
-1. Parar o container sem apagar os dados:
-```bash
-make down
-```
-
-2. Parar e apagar o volume (reset total):
-```bash
-make down-v
-```
-
-### 6️⃣ Conferir ambiente atual
-```bash
-make env
-```
-_Exibe o host, porta, usuário e banco utilizados pelos comandos automáticos._
-
+💡 _O ambiente virtual .venv já está incluído no .gitignore para evitar versionamento. Todas as dependências utilizadas no projeto serão registradas em requirements.txt._
 
 <br>
 
