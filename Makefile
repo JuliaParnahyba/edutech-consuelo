@@ -15,6 +15,7 @@ COMPOSE			?= docker compose
 DOCKER_UP		= $(COMPOSE) up -d
 DOCKER_DOWN		= $(COMPOSE) down
 DOCKER_DOWN_V	= $(COMPOSE) down -v
+DOCKER_STATE	= docker ps --filter "name=${POSTGRES_DB}"
 PG_CMD			= PGPASSWORD='$(POSTGRES_PASSWORD)' psql -h $(POSTGRES_HOST) -p $(POSTGRES_PORT) -U $(POSTGRES_USER) -d $(POSTGRES_DB) -v ON_ERROR_STOP=1
 
 # -------- Python dentro do container app
@@ -100,6 +101,10 @@ down-v: ## Derruba containers e volume
 
 logs: ## Logs do compose
 	$(COMPOSE) logs -f
+
+state: ## Verifia se container está ativo
+	$(call banner,Plotando o estado do container)
+	@$(DOCKER_STATE)
 
 env: ## Exibe variáveis de ambiente efetivas usadas pelo Make
 	$(call banner,Ambiente efetivo)
@@ -256,7 +261,7 @@ py.exit!: ## Sai automaticamente da venv (executa 'deactivate' + 'exec bash')
 	@printf "$(FG_YELLOW)Encerrando venv e reabrindo shell limpo...$(RESET)\n"
 	@bash -c 'if [ -n "$$VIRTUAL_ENV" ]; then deactivate 2>/dev/null || true; fi; exec bash'
 
-data.gen: py.deps ## Gera CSVs em /data com parâmetros padronizados
+data.gen: py.deps ## Gera CSVs em `/data` com parâmetros padronizados
 	$(call spin_log,Gerando CSVs (python/gerador_dados.py), \
 	$(PY) $(GEN_SCRIPT) \
 		--seed $(SEED) \

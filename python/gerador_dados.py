@@ -24,8 +24,6 @@ from utils import resolve_paths, setup_logger, write_csv, to_iso
 # -----------------------------
 # Configurações padrão
 # -----------------------------
-EDUTECH_DOMAIN = "edutech.com.br"
-
 DEFAULT_SEED = 42
 
 # Lista de nível de cursos

@@ -58,7 +58,7 @@ def setup_logger(name: str = "edutech.generator", level: int = logging.INFO) -> 
         logging.Logger: instância configurada pronta para uso
     """
     logger = logging.getLogger(name)
-    logger.propagat = False
+    logger.propagate = False
     logger.setLevel(level)
 
     fmt = logging.Formatter("[%(levelname)s] %(message)s")
