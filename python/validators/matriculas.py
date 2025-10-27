@@ -55,7 +55,7 @@ def validate(df: pd.DataFrame) -> List[Issue]:
     a = pd.to_datetime(df["matricula_data_atualizacao"], errors="coerce", format="%Y-%m-%d %H:%M:%S")
     bad = c.notna() & a.notna() & (a < c)
     for i in df[bad].index:
-        issues.append(Issue("quality", "Atualização não pode ser anterior à criação", int(i), "<prefix>_data_atualizacao"))
+        issues.append(Issue("quality", "Atualização não pode ser anterior à criação", int(i), "matricula_data_atualizacao"))
 
     # 4) PK
     issues += check_pk(df, pk_cols)
