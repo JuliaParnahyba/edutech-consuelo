@@ -44,7 +44,14 @@ def validate(df: pd.DataFrame) -> List[Issue]:
     if not any(i.kind == "structure" for i in issues):
         issues += validate_types_generic(df, cols_spec)
 
-    # 3) PK
+    # 3) “data_atualizacao ≥ data_criacao”     
+    c = pd.to_datetime(df["categoria_data_criacao"], errors="coerce", format="%Y-%m-%d %H:%M:%S")
+    a = pd.to_datetime(df["categoria_data_atualizacao"], errors="coerce", format="%Y-%m-%d %H:%M:%S")
+    bad = c.notna() & a.notna() & (a < c)
+    for i in df[bad].index:
+        issues.append(Issue("quality", "Atualização não pode ser anterior à criação", int(i), "categoria_data_atualizacao"))
+
+    # 4) PK
     issues += check_pk(df, pk_cols)
 
     return issues

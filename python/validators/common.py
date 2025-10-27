@@ -54,32 +54,61 @@ def _coerce_numeric(series: pd.Series, kind: str) -> pd.Series:
 
 def validate_types_generic(df: pd.DataFrame, columns_spec: Dict[str, Any]) -> List[Issue]:
     issues: List[Issue] = []
-
     for col, colspec in (columns_spec or {}).items():
         if col not in df.columns:
             continue
+
         series = df[col]
         non_null = ~(series.isna() | (series.astype(str).str.strip() == ""))
         t = (colspec or {}).get("type", "string")
 
         if t == "int":
             coerced = _coerce_numeric(series, "int")
-            bad = non_null & coerced.isna()
-            issues += [Issue("type", "Valor inteiro inválido", int(i), col) for i in df[bad].index]
+            bad_type = non_null & coerced.isna()
+            issues += [Issue("type", "Valor inteiro inválido", int(i), col) for i in df[bad_type].index]
+
+            # ge/le para inteiros (só onde o tipo é válido)
+            ok_num = non_null & ~bad_type
+            if "ge" in colspec:
+                ge = colspec["ge"]
+                bad = ok_num & (coerced < ge)
+                issues += [Issue("domain", f"Valor menor que {ge}", int(i), col) for i in df[bad].index]
+            if "le" in colspec:
+                le = colspec["le"]
+                bad = ok_num & (coerced > le)
+                issues += [Issue("domain", f"Valor maior que {le}", int(i), col) for i in df[bad].index]
+
         elif t in ("float", "decimal"):
             coerced = _coerce_numeric(series, "float")
-            bad = non_null & coerced.isna()
-            issues += [Issue("type", "Valor numérico inválido", int(i), col) for i in df[bad].index]
+            bad_type = non_null & coerced.isna()
+            issues += [Issue("type", "Valor numérico inválido", int(i), col) for i in df[bad_type].index]
+
+            # ge/le para decimais (só onde o tipo é válido)
+            ok_num = non_null & ~bad_type
+            if "ge" in colspec:
+                ge = colspec["ge"]
+                bad = ok_num & (coerced < ge)
+                issues += [Issue("domain", f"Valor menor que {ge}", int(i), col) for i in df[bad].index]
+            if "le" in colspec:
+                le = colspec["le"]
+                bad = ok_num & (coerced > le)
+                issues += [Issue("domain", f"Valor maior que {le}", int(i), col) for i in df[bad].index]
+
         elif t == "date":
             fmt = colspec.get("fmt")
             parsed = pd.to_datetime(series, errors="coerce", format=fmt)
             bad = non_null & parsed.isna()
             issues += [Issue("type", f"Data inválida (esperado {fmt})", int(i), col) for i in df[bad].index]
+
         elif t == "email":
             bad = non_null & ~series.astype(str).str.match(EMAIL_REGEX)
             issues += [Issue("domain", f"Email inválido: '{v}'", int(i), col) for i, v in series[bad].items()]
 
-        # domínios extras
+        else:
+            # tipo string "livre"
+            pass
+
+        # Regras de domínio extras para strings/enums
         if "min_len" in colspec:
             bad = non_null & (series.astype(str).str.len() < int(colspec["min_len"]))
             issues += [Issue("domain", f"Comprimento menor que {colspec['min_len']}", int(i), col) for i in df[bad].index]
@@ -87,8 +116,8 @@ def validate_types_generic(df: pd.DataFrame, columns_spec: Dict[str, Any]) -> Li
             allowed = set(colspec["enum"])
             bad = non_null & ~series.isin(allowed)
             issues += [Issue("domain", f"Valor '{v}' não permitido", int(i), col) for i, v in series[bad].items()]
-
     return issues
+
 
 def check_pk(df: pd.DataFrame, pk_cols: list[str]) -> list[Issue]:
     issues: list[Issue] = []
@@ -174,3 +203,16 @@ def check_fk_exists(
 
     return issues
 
+def _bool_as_str(series: pd.Series) -> pd.Series:
+    """
+    Converte para strings 'true'/'false' de forma tolerante:
+    aceita bools reais e strings com qualquer capitalização.
+    """
+    s = series.copy()
+    # primeiro, mapeia bool reais
+    if s.dtype == bool:
+        return s.map({True: "true", False: "false"})
+    # strings: strip + lower + normalização de variantes
+    s = s.astype(str).str.strip().str.lower()
+    s = s.replace({"true": "true", "false": "false"})
+    return s

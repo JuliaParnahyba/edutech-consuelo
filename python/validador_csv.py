@@ -31,6 +31,8 @@ from validators import (
   modulos as v_modulos,
   aulas as v_aulas,
   matriculas as v_matriculas,
+  progresso_aulas as v_progresso,
+  avaliacoes as v_avaliacoes,
 )
 
 VALIDATORS: Dict[str, object] = {
@@ -42,6 +44,8 @@ VALIDATORS: Dict[str, object] = {
   "modulos": v_modulos,
   "aulas": v_aulas,
   "matriculas": v_matriculas,
+  "progresso_aulas":v_progresso,
+  "avaliacoes":v_avaliacoes,
 }
 
 def parse_args() -> argparse.Namespace:
