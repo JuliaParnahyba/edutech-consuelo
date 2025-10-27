@@ -213,27 +213,6 @@ _Exibe o host, porta, usuário e banco utilizados pelos comandos automáticos._
 
 <br>
 
-## 🐍 Ambiente Python
-
-**Para criar ambiente virtual**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-.venv\Scripts\activate     # Windows
-```
-
-<br>
-
-**Instale as dependências do projeto:**
-```bash
-pip install -r requirements.txt
-```
-
-💡 _Ao executar `make up`, 
-
-<br>
-
 ## Estrutura de diretórios
 
 ```bash
