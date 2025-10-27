@@ -163,7 +163,23 @@ _Se alguma variável não for informada, o gerador usa defaults internos (defini
 
 <br>
 
-2. Inserir dados diretamente no PostgreSQL
+2. Validador dos dados `.csv`
+
+_Valida a tabela desejada, de forma individual_
+```bash
+make data.validate TABLE=table_name
+```
+
+**ou**
+
+```bash
+make data.validate-all
+```
+_Valida todas as tables de forma sequencial, acompanhadas de logs e resumo final._
+
+<br>
+
+3. Inserir dados diretamente no PostgreSQL
 ```bash
 make db.load-csv
 ```
@@ -232,9 +248,12 @@ EDUTECH-CONSUELO/
 │   └── Resumo_EduTech.md
 │
 ├── python/
+│   ├── validators/                    # diretório contendo todos os validadores
+│   │   ├── alunos.py                  # scripts de validação por tabela
+│   │   └── ...   
 │   ├── gerador_dados.py               # gera dados sintéticos com Faker
-│   ├── validador.py                   # valida coerência entre tabelas
 │   ├── utils.py                       # funções auxiliares
+│   └── ...
 │
 ├── sql/
 │   ├── deploy.sql                     # orquestrador geral (BEGIN…COMMIT)

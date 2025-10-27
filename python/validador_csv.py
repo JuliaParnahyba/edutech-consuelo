@@ -13,7 +13,7 @@
 #   - Geração de relatório (console + arquivo JSON e TXT)
 #   - Saídas limpas em /data/clean e inválidas em /data/quarantine
 #
-# Integra com utils.py (opcional) para paths e logging.
+# Integra com utils.py para paths e logging.
 # ===============================================================
 
 from __future__ import annotations
