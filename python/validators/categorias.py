@@ -30,9 +30,9 @@ SPEC_CATEGORIAS: Dict[str, Any] = {
 def validate(df: pd.DataFrame) -> List[Issue]:
     issues: List[Issue] = []
     req, cols_spec, pk_cols = (
-        SPEC_AULAS["required"],
-        SPEC_AULAS["columns"],
-        SPEC_AULAS["pk"]
+        SPEC_CATEGORIAS["required"],
+        SPEC_CATEGORIAS["columns"],
+        SPEC_CATEGORIAS["pk"]
     )
 
     # 1) estrutura
