@@ -5,10 +5,14 @@
 
 # -------- Config DB (podem vir de .env, mas aqui há defaults seguros)
 POSTGRES_HOST ?= localhost
-POSTGRES_PORT ?= 5433
+POSTGRES_PORT ?= 5432
 POSTGRES_USER ?= edutech_admin
-POSTGRES_PASSWORD ?= edutechpass
+POSTGRES_PASSWORD ?= change_me
 POSTGRES_DB ?= edutech
+
+# --- nomes/serviços
+PG_SVC        	?= edutech_db          # container_name no docker-compose.yml
+APP_SVC       	?= edutech_app
 
 # -------- Comandos base
 COMPOSE			?= docker compose
@@ -16,7 +20,10 @@ DOCKER_UP		= $(COMPOSE) up -d
 DOCKER_DOWN		= $(COMPOSE) down
 DOCKER_DOWN_V	= $(COMPOSE) down -v
 DOCKER_STATE	= docker ps --filter "name=${POSTGRES_DB}"
-PG_CMD			= PGPASSWORD='$(POSTGRES_PASSWORD)' psql -h $(POSTGRES_HOST) -p $(POSTGRES_PORT) -U $(POSTGRES_USER) -d $(POSTGRES_DB) -v ON_ERROR_STOP=1
+
+# --- psql SEM depender do host (exec dentro do container do DB)
+PG_CMD 			= docker exec -e PGPASSWORD='$(POSTGRES_PASSWORD)' -i $(PG_SVC) \
+        psql -h 127.0.0.1 -p 5432 -U $(POSTGRES_USER) -d $(POSTGRES_DB) -v ON_ERROR_STOP=1
 
 # -------- Python dentro do container app
 PYRUN = $(COMPOSE) run --rm $(APP_SVC) python
@@ -85,7 +92,7 @@ help: ## Mostra esta ajuda
 	@printf "$(GRAY)Conexão atual:$(RESET) host=$(POSTGRES_HOST) port=$(POSTGRES_PORT) db=$(POSTGRES_DB) user=$(POSTGRES_USER)\n"
 	@echo ""
 
-.PHONY: help up down down-v env db.apply db.seed db.seed-dev db.clean db.reset db.shell db.info db.load-csv db.query
+.PHONY: help up down down-v logs state env db.apply db.seed db.seed-dev db.clean db.reset db.shell db.info db.load-csv db.query
 
 # =========================
 # Docker
@@ -107,8 +114,9 @@ state: ## Verifia se container está ativo
 	@$(DOCKER_STATE)
 
 env: ## Exibe variáveis de ambiente efetivas usadas pelo Make
-	$(call banner,Ambiente efetivo)
-	@printf "  HOST : $(POSTGRES_HOST)\n  PORT : $(POSTGRES_PORT)\n  USER : $(POSTGRES_USER)\n  DB   : $(POSTGRES_DB)\n"
+	$(call banner,Ambiente)
+	@printf "  HOST : $(POSTGRES_HOST)\n  PORT : $(POSTGRES_PORT)\n  \
+	USER : $(POSTGRES_USER)\n  PASS : $(POSTGRES_PASSWORD)\n  DB   : $(POSTGRES_DB)\n"
 
 # =========================
 # Banco de Dados (psql)
@@ -155,23 +163,23 @@ db.info: ## Mostra info resumida: schemas, tabelas, índices, triggers e FKs
 
 db.load-csv: ## Carrega CSVs de /data no schema edutech via \copy (ordem correta)
 	$(call banner,Carregando CSVs no Postgres (schema edutech))
-	@$(PG_CMD) -c "\copy edutech.categorias (categoria_id,categoria_nome,categoria_descricao,categoria_data_criacao,categoria_data_atualizacao) from 'data/categorias.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.especialidades (especialidade_id,especialidade_nome,especialidade_descricao,especialidade_data_criacao,especialidade_data_atualizacao) from 'data/especialidades.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.nivel_cursos (nivel_curso_id,nivel_curso_nome,nivel_curso_descricao,nivel_curso_data_criacao,nivel_curso_data_atualizacao) from 'data/nivel_cursos.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.situacoes_matricula (situacao_matricula_id,situacao_matricula_tipo,situacao_matricula_descricao,situacao_matricula_data_criacao,situacao_matricula_data_atualizacao) from 'data/situacoes_matricula.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.categorias (categoria_id,categoria_nome,categoria_descricao,categoria_data_criacao,categoria_data_atualizacao) from '/import/data/categorias.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.especialidades (especialidade_id,especialidade_nome,especialidade_descricao,especialidade_data_criacao,especialidade_data_atualizacao) from '/import/data/especialidades.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.nivel_cursos (nivel_curso_id,nivel_curso_nome,nivel_curso_descricao,nivel_curso_data_criacao,nivel_curso_data_atualizacao) from '/import/data/nivel_cursos.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.situacoes_matricula (situacao_matricula_id,situacao_matricula_tipo,situacao_matricula_descricao,situacao_matricula_data_criacao,situacao_matricula_data_atualizacao) from '/import/data/situacoes_matricula.csv' with (format csv, header true)"
 
-	@$(PG_CMD) -c "\copy edutech.instrutores (instrutor_id,instrutor_primeiro_nome,instrutor_ultimo_nome,instrutor_email,instrutor_especial_principal_id,instrutor_biografia,instrutor_data_criacao,instrutor_data_atualizacao) from 'data/instrutores.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.instrutor_especialidades (ie_instrutor_id,ie_especialidade_id,ie_data_criacao,ie_data_atualizacao) from 'data/instrutor_especialidades.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.instrutores (instrutor_id,instrutor_primeiro_nome,instrutor_ultimo_nome,instrutor_email,instrutor_especial_principal_id,instrutor_biografia,instrutor_data_criacao,instrutor_data_atualizacao) from '/import/data/instrutores.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.instrutor_especialidades (ie_instrutor_id,ie_especialidade_id,ie_data_criacao,ie_data_atualizacao) from '/import/data/instrutor_especialidades.csv' with (format csv, header true)"
 
-	@$(PG_CMD) -c "\copy edutech.cursos (curso_id,curso_titulo,curso_descricao,curso_categoria_id,curso_instrutor_id,curso_nivel_id,curso_carga_horaria,curso_preco,curso_data_criacao,curso_data_atualizacao) from 'data/cursos.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.modulos (modulo_id,modulo_curso_id,modulo_titulo,modulo_ordem,modulo_descricao,modulo_data_criacao,modulo_data_atualizacao) from 'data/modulos.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.aulas (aula_id,aula_modulo_id,aula_titulo,aula_ordem,aula_duracao_min,aula_tipo,aula_data_criacao,aula_data_atualizacao) from 'data/aulas.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.cursos (curso_id,curso_titulo,curso_descricao,curso_categoria_id,curso_instrutor_id,curso_nivel_id,curso_carga_horaria,curso_preco,curso_data_criacao,curso_data_atualizacao) from '/import/data/cursos.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.modulos (modulo_id,modulo_curso_id,modulo_titulo,modulo_ordem,modulo_descricao,modulo_data_criacao,modulo_data_atualizacao) from '/import/data/modulos.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.aulas (aula_id,aula_modulo_id,aula_titulo,aula_ordem,aula_duracao_min,aula_tipo,aula_data_criacao,aula_data_atualizacao) from '/import/data/aulas.csv' with (format csv, header true)"
 
-	@$(PG_CMD) -c "\copy edutech.alunos (aluno_id,aluno_primeiro_nome,aluno_ultimo_nome,aluno_email,aluno_data_nascimento,aluno_data_criacao,aluno_data_atualizacao) from 'data/alunos.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.matriculas (matricula_id,matricula_aluno_id,matricula_curso_id,matricula_situacao_id,matricula_num_matricula,matricula_data_matricula,matricula_valor_pago,matricula_data_conclusao,matricula_diploma,matricula_data_criacao,matricula_data_atualizacao) from 'data/matriculas.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.alunos (aluno_id,aluno_primeiro_nome,aluno_ultimo_nome,aluno_email,aluno_data_nascimento,aluno_data_criacao,aluno_data_atualizacao) from '/import/data/alunos.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.matriculas (matricula_id,matricula_aluno_id,matricula_curso_id,matricula_situacao_id,matricula_num_matricula,matricula_data_matricula,matricula_valor_pago,matricula_data_conclusao,matricula_diploma,matricula_data_criacao,matricula_data_atualizacao) from '/import/data/matriculas.csv' with (format csv, header true)"
 
-	@$(PG_CMD) -c "\copy edutech.progresso_aulas (progresso_id,progresso_matricula_id,progresso_aula_id,progresso_percentual,progresso_concluida,progresso_data_conclusao,progresso_tempo_assistido_min,progresso_data_criacao,progresso_data_atualizacao) from 'data/progresso_aulas.csv' with (format csv, header true)"
-	@$(PG_CMD) -c "\copy edutech.avaliacoes (avaliacao_id,avaliacao_aluno_id,avaliacao_aula_id,avaliacao_nota,avaliacao_comentario,avaliacao_data_criacao,avaliacao_data_atualizacao) from 'data/avaliacoes.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.progresso_aulas (progresso_id,progresso_matricula_id,progresso_aula_id,progresso_percentual,progresso_concluida,progresso_data_conclusao,progresso_tempo_assistido_min,progresso_data_criacao,progresso_data_atualizacao) from '/import/data/progresso_aulas.csv' with (format csv, header true)"
+	@$(PG_CMD) -c "\copy edutech.avaliacoes (avaliacao_id,avaliacao_aluno_id,avaliacao_aula_id,avaliacao_nota,avaliacao_comentario,avaliacao_data_criacao,avaliacao_data_atualizacao) from '/import/data/avaliacoes.csv' with (format csv, header true)"
 	$(call ok,Carga dos CSVs concluída)
 
 db.query: ## Executa consultas analíticas em sql/queries/queries.sql
@@ -210,7 +218,7 @@ PROG_MAX_PCT  	?= 70
 AVAL_PROB     	?= 0.6
 SEED          	?= 42
 
-.PHONY: py.which py.shell py.deps py.exit py.exit! data.gen data.peek data.clean
+.PHONY: py.which py.venv py.shell py.deps py.exit py.exit! data.gen data.peek data.clean
 
 py.which: ## Mostra o Python do sistema e da venv
 	$(call banner,Detectando Python)
@@ -282,14 +290,29 @@ data.peek: ## Mostra cabeçalhos e primeiras linhas de cada CSV
 	  echo ""; \
 	done
 
-data.clean: ## Remove todos os CSVs de /data
-	$(call spin,Limpando /data/*.csv, rm -f data/*.csv)
+data.clean: ## Remove todos os CSVs de /data, listando cada arquivo (colorido)
+	$(call banner,Removendo arquivos CSV em /data)
+	@set -e; \
+	if [ ! -d data ]; then \
+		printf "$(FG_YELLOW)⚠ Diretório data/ não existe — nada a remover.$(RESET)\n"; exit 0; \
+	fi; \
+	count=$$(find data -type f -name '*.csv' 2>/dev/null | wc -l | tr -d ' '); \
+	if [ "$$count" -eq 0 ]; then \
+		printf "$(FG_YELLOW)⚠ Nenhum arquivo CSV encontrado em /data.$(RESET)\n"; exit 0; \
+	fi; \
+	for f in $$(find data -type f -name '*.csv'); do \
+		printf "$(FG_RED)🗑️  Removendo$(RESET): $(FG_CYAN)%s$(RESET)\n" "$$f"; \
+		rm -f "$$f"; \
+	done; \
+	printf "$(FG_GREEN)———————————————————————————————————————————$(RESET)\n"; \
+	printf "$(FG_GREEN)✔ Removidos $$count arquivo(s) CSV com sucesso!$(RESET)\n"; \
+	printf "$(FG_GREEN)———————————————————————————————————————————$(RESET)\n"
 
 # =========================
 # Validação dos CSVs (Python)
 # =========================
-VAL_SCRIPT      ?= python/validador_csv.py
-VAL_INPUT_DIR   ?= data
+VAL_SCRIPT		?= python/validador_csv.py
+VAL_INPUT_DIR	?= data
 
 # Ordem respeitando dependências de FK (pais → filhos)
 VALIDATION_TABLES := \
@@ -306,6 +329,8 @@ VALIDATION_TABLES := \
   matriculas \
   progresso_aulas \
   avaliacoes
+
+.PHONY: data.validate data.validate-all
 
 # Valida UMA tabela específica:
 # Uso: make data.validate TABLE=alunos

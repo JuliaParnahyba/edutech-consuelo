@@ -30,7 +30,7 @@ O projeto segue uma arquitetura modular e idempotente — todos os scripts podem
 
 | Categoria           | Ferramenta                 |
 | ------------------: | :------------------------- |
-| Banco de Dados      | PostgreSQL 15              |
+| Banco de Dados      | PostgreSQL 16              |
 | Linguagem de Script | Python 3.12                |
 | Biblioteca de Dados | Faker                      |
 | Ambiente            | Docker Compose             |
@@ -43,7 +43,7 @@ O projeto segue uma arquitetura modular e idempotente — todos os scripts podem
 ## Instalação
 
 ### Pré-requisitos
-- Docker e Docker Compose instalados
+- Docker e Docker Compose instalados. Para informação de como instalar [clique aqui](https://docs.docker.com/engine/install/)
 - Make disponível no terminal
 - Sistema operacional compatível (Linux, WSL2 ou macOS)
 
@@ -53,22 +53,28 @@ Todos os comandos abaixo funcionam em Linux, macOS e WSL2 (Windows).
 
 > <br> 
 > 
-> Comandos principais disponíveis:
-> | Comando            | Descrição                                                            |
-> | -----------------: | :------------------------------------------------------------------- |
-> | `make up`          | Sobe os containers Docker (`PostgreSQL` + `Adminer`)                 |
-> | `make down`        | Derruba os containers (mantém o volume e os dados)                   |
-> | `make down-v`      | Derruba containers **e** remove o volume (reset total do banco)      |
-> | `make env`         | Exibe as variáveis de ambiente efetivas de conexão                   |
-> | `make db.apply`    | Executa o `deploy.sql` (cria ou atualiza o schema completo do banco) |
-> | `make db.clean`    | Remove apenas o schema `edutech` (mantendo o banco e usuários)       |
-> | `make db.reset`    | Dropa e recria todo o schema, aplicando o `deploy.sql` do zero       |
-> | `make db.seed`     | Executa os **seeds** de dados idempotentes (sem apagar os registros) |
-> | `make db.seed-dev` | Executa os **seeds** com `TRUNCATE + RESTART IDENTITY` (modo DEV)    |
-> | `make db.shell`    | Abre uma sessão interativa `psql` conectada ao banco `edutech`       |
-> | `make db.info`     | Exibe um resumo das tabelas, índices, triggers e FKs do schema       |
-> | `make db.query`    | Executa as consultas analíticas em `sql/queries/queries.sql`         |
-> | `make help`        | Mostra a lista completa de comandos disponíveis e suas descrições    |
+> Principais comandos disponíveis:
+> | Comando                 | Descrição                                                            |
+> | ----------------------: | :------------------------------------------------------------------- |
+> | `make up`               | Sobe os containers Docker (`PostgreSQL` + `Adminer`)                 |
+> | `make down`             | Derruba os containers (mantém o volume e os dados)                   |
+> | `make down-v`           | Derruba containers **e** remove o volume (reset total do banco)      |
+> | `make logs`             | Exibe os Logs do compose                                             |
+> | `make state`            | Verifia se container está ativo                                      |
+> | `make db.apply`         | Executa o `deploy.sql` (cria ou atualiza o schema completo do banco) |
+> | `make db.load-csv`      | Carrega CSVs de `/data` no schema edutech via `\copy` (ordem correta)|
+> | `make db.query`         | Executa as consultas analíticas em `sql/queries/queries.sql`         |
+> | `make db.clean`         | Remove apenas o schema `edutech` (mantendo o banco e usuários)       |
+> | `make db.reset`         | Dropa e recria todo o schema, aplicando o `deploy.sql` do zero       |
+> | `make db.info`          | Exibe um resumo das tabelas, índices, triggers e FKs do schema       |
+> | `make help`             | Mostra a lista completa de comandos disponíveis e suas descrições    |
+> | `make py.which`         | Mostra o Python do sistema e da `venv`                               |
+> | `make py.venv`          | Cria `venv` local (.venv) se não existir                             |
+> | `make data.gen`         | Gera CSVs em `/data` com parâmetros padronizados                     |
+> | `make data.peek`        | Mostra cabeçalhos e primeiras linhas de cada CSV                     |
+> | `make data.clean`       | Remove todos os CSVs de `/data`                                      |
+> | `make data.validate`    | Valida a tabela informada, ex: `make data.validate-one TABLE=alunos` |
+> | `make data.validate-all`| Valida todos os CSVs em sequência, mostrando resumo ao final         |
 >
 > 
 > <br>
@@ -109,12 +115,20 @@ Abra o navegador [http://localhost:8080](http://localhost:8080) e preenchar os c
 | **System**   | PostgreSQL        |
 | **Server**   | `db`              |
 | **Username** | `edutech_admin`   |
-| **Password** | `sua_senha`       |
+| **Password** | `*********`       |
 | **Database** | `edutech`         |
+
 
 <br>
 
 ![Login Adminer](/docs/src_img/image.png)
+
+<br>
+
+_Verificar informações para acesso ao Adminer:_
+```bash
+make env
+```
 
 <br>
 
