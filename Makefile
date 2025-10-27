@@ -174,7 +174,6 @@ db.load-csv: ## Carrega CSVs de /data no schema edutech via \copy (ordem correta
 	@$(PG_CMD) -c "\copy edutech.avaliacoes (avaliacao_id,avaliacao_aluno_id,avaliacao_aula_id,avaliacao_nota,avaliacao_comentario,avaliacao_data_criacao,avaliacao_data_atualizacao) from 'data/avaliacoes.csv' with (format csv, header true)"
 	$(call ok,Carga dos CSVs concluída)
 
-
 db.query: ## Executa consultas analíticas em sql/queries/queries.sql
 	$(call spin,Executando consultas (queries.sql), $(PG_CMD) -f sql/queries/queries.sql)
 	$(call ok,Consultas finalizadas com sucesso!)
@@ -182,7 +181,6 @@ db.query: ## Executa consultas analíticas em sql/queries/queries.sql
 # =========================
 # Python / Dados sintéticos
 # =========================
-
 # Descobrir Python do sistema (python3 ou python)
 SYS_PY := $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null)
 
@@ -286,6 +284,100 @@ data.peek: ## Mostra cabeçalhos e primeiras linhas de cada CSV
 
 data.clean: ## Remove todos os CSVs de /data
 	$(call spin,Limpando /data/*.csv, rm -f data/*.csv)
+
+# =========================
+# Validação dos CSVs (Python)
+# =========================
+VAL_SCRIPT      ?= python/validador_csv.py
+VAL_INPUT_DIR   ?= data
+
+# Ordem respeitando dependências de FK (pais → filhos)
+VALIDATION_TABLES := \
+  categorias \
+  especialidades \
+  nivel_cursos \
+  situacoes_matricula \
+  instrutores \
+  instrutor_especialidades \
+  cursos \
+  modulos \
+  aulas \
+  alunos \
+  matriculas \
+  progresso_aulas \
+  avaliacoes
+
+# Valida UMA tabela específica:
+# Uso: make data.validate-one TABLE=alunos
+data.validate-one: ## Valida apenas a tabela informada (ex.: make data.validate-one TABLE=alunos)
+	@if [ -z "$(TABLE)" ]; then \
+	  $(call fail,Informe a tabela com 'TABLE=...' (ex.: make data.validate-one TABLE=alunos)); \
+	  exit 2; \
+	fi
+	$(call banner,Validando tabela '$(TABLE)')
+	$(call spin_log,Executando validador ($(TABLE)), \
+	  $(PY) $(VAL_SCRIPT) --table $(TABLE) --input $(VAL_INPUT_DIR)/$(TABLE).csv)
+
+# Valida TODAS as tabelas em ordem (para na 1ª falha)
+data.validate: py.deps ## Valida todos os CSVs gerados em data/ na ordem correta
+	$(eval PY := $(abspath $(PY)))
+	$(call banner,Validação sequencial dos CSVs (ordem de FKs))
+	@set -euo pipefail; \
+	for t in $(VALIDATION_TABLES); do \
+	  if [ ! -f "$(VAL_INPUT_DIR)/$$t.csv" ]; then \
+	    printf "$(FG_YELLOW)⚠ %s$(RESET)\n" "Arquivo '$(VAL_INPUT_DIR)/$$t.csv' não encontrado — pulando"; \
+	    continue; \
+	  fi; \
+	  bash -c 'set -euo pipefail; MSG=$$(printf "%s" "Validando '"$$t"'"); LOG=$$(mktemp); \
+	    i=0; frames="/-\|"; printf "$(FG_BLUE)⏳ %s $(RESET)" "$$MSG"; \
+	    ( $(PY) $(VAL_SCRIPT) --table '"$$t"' --input $(VAL_INPUT_DIR)/'"$$t"'.csv ) >"$$LOG" 2>&1 & pid=$$!; \
+	    while kill -0 $$pid 2>/dev/null; do i=$$(( (i+1) % 4 )); \
+	      printf "\r$(FG_BLUE)⏳ %s %s$(RESET) " "$$MSG" "$${frames:$$i:1}"; sleep 0.1; done; \
+	    if wait $$pid; then \
+	      printf "\r$(FG_GREEN)✔ %s$(RESET)\n" "$$MSG"; cat "$$LOG"; rm -f "$$LOG"; \
+	    else \
+	      status=$$?; printf "\r$(FG_RED)✖ %s (status $$status)$(RESET)\n" "$$MSG"; \
+	      printf "$(FG_YELLOW)--- LOG ---$(RESET)\n"; cat "$$LOG"; rm -f "$$LOG"; exit $$status; \
+	    fi'; \
+	done; \
+	printf "$(FG_GREEN)✔ %s$(RESET)\n" "Validação concluída com sucesso!"
+
+# Valida todas as tabelas e CONTINUA mesmo se alguma falhar (mostra resumo final)
+data.validate-keepgoing: py.deps ## Valida todos os CSVs (não interrompe em erro; mostra resumo ao final)
+	$(eval PY := $(abspath $(PY)))
+	$(call banner,Validação (keepgoing) dos CSVs)
+	@set -euo pipefail; \
+	FAILS=0; \
+	for t in $(VALIDATION_TABLES); do \
+	  if [ ! -f "$(VAL_INPUT_DIR)/$$t.csv" ]; then \
+	    printf "$(FG_YELLOW)⚠ %s$(RESET)\n" "Arquivo '$(VAL_INPUT_DIR)/$$t.csv' não encontrado — pulando"; \
+	    continue; \
+	  fi; \
+	  echo ""; echo "── Validando $$t ─────────────────────────────────────────"; \
+	  if bash -c 'set -euo pipefail; MSG=$$(printf "%s" "Validando '"$$t"'"); LOG=$$(mktemp); \
+	      i=0; frames="/-\|"; printf "$(FG_BLUE)⏳ %s $(RESET)" "$$MSG"; \
+	      ( $(PY) $(VAL_SCRIPT) --table '"$$t"' --input $(VAL_INPUT_DIR)/'"$$t"'.csv ) >"$$LOG" 2>&1 & pid=$$!; \
+	      while kill -0 $$pid 2>/dev/null; do i=$$(( (i+1) % 4 )); \
+	        printf "\r$(FG_BLUE)⏳ %s %s$(RESET) " "$$MSG" "$${frames:$$i:1}"; sleep 0.1; done; \
+	      if wait $$pid; then \
+	        printf "\r$(FG_GREEN)✔ %s$(RESET)\n" "$$MSG"; cat "$$LOG"; rm -f "$$LOG"; \
+	      else \
+	        status=$$?; printf "\r$(FG_RED)✖ %s (status $$status)$(RESET)\n" "$$MSG"; \
+	        printf "$(FG_YELLOW)--- LOG ---$(RESET)\n"; cat "$$LOG"; rm -f "$$LOG"; exit $$status; \
+	      fi'; \
+	  then \
+	    printf "$(FG_GREEN)✔ %s$(RESET)\n" "$$t OK"; \
+	  else \
+	    printf "$(FG_RED)✖ %s$(RESET)\n" "$$t FAIL"; \
+	    FAILS=$$((FAILS+1)); \
+	  fi; \
+	done; \
+	echo ""; \
+	if [ $$FAILS -gt 0 ]; then \
+	  printf "$(FG_RED)✖ %s$(RESET)\n" "Validação concluída com $$FAILS falha(s)"; exit 1; \
+	else \
+	  printf "$(FG_GREEN)✔ %s$(RESET)\n" "Todas as validações passaram"; \
+	fi
 
 
 # Fim
