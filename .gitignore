@@ -1,19 +1,73 @@
-# Ambientes virtuais e variáveis locais
+# ========================
+#  AMBIENTES E VARIÁVEIS
+# ========================
 .venv/
 .env
 
-# Cache e temporários do Python
+# ========================
+#  PYTHON
+# ========================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.log
 
-# Configurações locais de editor
+# ========================
+#  EDITORES / IDEs
+# ========================
 .vscode/
 .idea/
+*.code-workspace
 
-# Arquivos de sistema (Windows/macOS)
+# ========================
+#  SISTEMA / SO
+# ========================
 .DS_Store
 Thumbs.db
 
-# Bancos locais e backups
+# ========================
+#  BANCOS DE DADOS LOCAIS / BACKUPS
+# ========================
 *.sqlite3
 __db_backups__/
+*.db
+*.bak
+*.sql~
+
+# ========================
+#  DADOS GERADOS PELOS SCRIPTS PYTHON
+# ========================
+# Evita versionar arquivos temporários, CSVs ou resultados intermediários
+/data/*.csv
+/data/clean/
+/data/quarantine/
+/data/tmp/
+/data/__output__/
+/data/__reports__/
+
+# ========================
+#  RELATÓRIOS E EXPORTS
+# ========================
+# Relatórios locais que podem ser regenerados
+*.xlsx
+*.xls
+*.json
+*.zip
+
+# ========================
+#  AMBIENTE / EXECUÇÃO LOCAL
+# ========================
+# Logs ou arquivos de execução
+*.pid
+*.log
+*.out
+*.tmp
+
+# ========================
+#  TESTES (CASO FUTUROS)
+# ========================
+# Arquivos de teste locais, mocks ou fixtures
+/tests/__pycache__/
+tests/*.pyc

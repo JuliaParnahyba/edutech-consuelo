@@ -1,20 +1,17 @@
 ---
-name: 🧩 Macro Task
+name: 🧩 Task
 about: Criar uma macro task (etapa principal do projeto)
 title: "[Etapa] Nome da macro task"
-labels: ["phase:macro"]
+labels: ["phase:task"]
 ---
 
 ### 🎯 Descrição
 Descreva o objetivo geral da etapa.
 
-### 🪜 Tasks e Subtasks
-- [ ] #<num> [Etapa] Nome da Task 1
-    - [ ] #<num> [Etapa.Subetaa] Nome da Task 1
-- [ ] #<num> [Etapa] Nome da Task 2
-    - [ ] #<num> [Etapa.Subetaa] Nome da Task 2
-- [ ] #<num> [Etapa] Nome da Task 3
-    - [ ] #<num> [Etapa.Subetaa] Nome da Task 3
+### 🪜 Subtasks
+- [ ] #<num> [Etapa.Subetaa] Nome da Task 1
+- [ ] #<num> [Etapa.Subetaa] Nome da Task 2
+- [ ] #<num> [Etapa.Subetaa] Nome da Task 3
 
 ### 📁 Diretório relacionado
 docs/ | data/ | python/ | sql/ 
